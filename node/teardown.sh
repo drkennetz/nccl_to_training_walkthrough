@@ -233,6 +233,19 @@ if [[ -e "$RAIL_RA_DROPIN" ]]; then
   done
 fi
 
+# ------------------------------------------------------ 6b2. ipvlan module (dranet)
+# A network-DRA driver that hands pods IPVLAN children loads the ipvlan module on first use and
+# nothing unloads it. It has no dependants and no users once the pods are gone, so removing it is
+# safe (unlike br_netfilter, see the note in section 7) and keeps the verify-clean diff empty.
+for m in ipvlan macvlan; do
+  if lsmod 2>/dev/null | awk -v m="$m" '$1==m && $3==0 {found=1} END {exit !found}'; then
+    if ! grep -qx "$m" "${BASELINE_DIR:-/nonexistent}/modules.txt" 2>/dev/null; then
+      log "unloading unused kernel module $m (loaded for pod sub-interfaces, not in the baseline)"
+      modprobe -r "$m" 2>/dev/null || warn "modprobe -r $m failed"
+    fi
+  fi
+done
+
 # ------------------------------------------------------ 6c. RDMA netns mode
 # install-agent.sh may have switched the RDMA subsystem's netns mode (RDMA_NETNS_MODE).
 # By now every pod sandbox is gone, so the switch back is accepted; restore whatever the
