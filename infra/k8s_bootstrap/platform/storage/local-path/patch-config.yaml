@@ -1,0 +1,18 @@
+# Point the provisioner at the big local NVMe. Strategic merge on a ConfigMap
+# merges per key, so `setup`, `teardown` and `helperPod.yaml` from upstream are
+# preserved and only config.json is replaced.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-path-config
+  namespace: local-path-storage
+data:
+  config.json: |-
+    {
+      "nodePathMap": [
+        {
+          "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
+          "paths": ["/mnt/localdisk/local-path"]
+        }
+      ]
+    }

@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sinfo:*)",
+      "Bash(squeue:*)",
+      "Bash(sacct:*)",
+      "Bash(scontrol show:*)",
+      "Bash(kubectl get:*)",
+      "Bash(kubectl describe:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(kubectl top:*)",
+      "Bash(kubectl config get-contexts:*)",
+      "Bash(kubectl api-resources:*)",
+      "Bash(helm list:*)",
+      "Bash(helm search repo:*)",
+      "Bash(helm show values:*)",
+      "Bash(helm repo list:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git remote -v)",
+      "Bash(bin/k8s-status:*)",
+      "Bash(bin/k8s-verify-clean:*)",
+      "Bash(bin/k8s-check-upgrades:*)",
+      "Bash(shellcheck:*)",
+      "Bash(bash -n:*)"
+    ],
+    "deny": [
+      "Bash(sudo * /etc/slurm/*)",
+      "Bash(scontrol create:*)",
+      "Bash(scontrol update:*)",
+      "Bash(scontrol delete:*)",
+      "Bash(sudo systemctl * nvidia-imex*)",
+      "Bash(sudo systemctl * nvidia-dcgm*)",
+      "Bash(sudo systemctl * dcgm-exporter*)",
+      "Bash(sudo systemctl * containerd*)",
+      "Bash(sudo systemctl * docker*)",
+      "Bash(sudo systemctl * slurmd*)",
+      "Read(/etc/slurm/slurmdbd.conf)",
+      "Read(**/.credentials.json)",
+      "Read(~/.config/k8s-bootstrap/github-token)"
+    ]
+  }
+}

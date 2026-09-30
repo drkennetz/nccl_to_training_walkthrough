@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# bin/k8s-platform -- install the in-cluster platform: storage and monitoring.
+#
+# Cilium is installed by bin/k8s-up (nothing works without a CNI) and the GPU
+# stack by bin/k8s-gpu (it has two mutually exclusive modes worth choosing
+# deliberately). This covers the rest.
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-platform [--storage] [--monitoring] [--all] [--status] [options]
+
+  --storage      local-path (RWO, default class) + csi-driver-nfs (RWX)
+  --monitoring   kube-prometheus-stack, scraping the HOST exporters
+  --all          both (default if no component flag is given)
+  --status       report what is installed and exit (read-only)
+  --cluster NAME cluster config (default: sole config in clusters/)
+  --dry-run      print what would happen, including the rendered scrape config
+  -h, --help
+
+Storage gives you two classes with different jobs:
+  local-path  RWO, node-local, on the big NVMe -- scratch and checkpoints
+  nfs         RWX, shared     -- datasets and weights for multi-node work
+
+Monitoring deliberately deploys NO node-exporter or dcgm-exporter: the hosts
+already run those and the chart's versions would collide on their hostPorts.
+USAGE
+}
+
+CLUSTER="" DO_STORAGE=0 DO_MON=0 ACTION=install
+while (($#)); do
+  case "$1" in
+    --storage)    DO_STORAGE=1; shift ;;
+    --monitoring) DO_MON=1; shift ;;
+    --all)        DO_STORAGE=1; DO_MON=1; shift ;;
+    --status)     ACTION=status; shift ;;
+    --cluster)    CLUSTER="${2:?}"; shift 2 ;;
+    --dry-run)    DRY_RUN=1; shift ;;
+    -h|--help)    usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+(( DO_STORAGE || DO_MON )) || { DO_STORAGE=1; DO_MON=1; }
+
+require_not_root
+load_cluster "$CLUSTER"
+
+if [[ "$ACTION" == status ]]; then
+  platform_require_tools
+  step "StorageClasses"
+  _k get storageclass -o custom-columns=\
+'NAME:.metadata.name,PROVISIONER:.provisioner,DEFAULT:.metadata.annotations.storageclass\.kubernetes\.io/is-default-class,RECLAIM:.reclaimPolicy,BINDING:.volumeBindingMode' \
+    2>/dev/null | sed 's/^/  /' || printf '  none\n'
+  step "PersistentVolumeClaims"
+  _k get pvc -A --no-headers 2>/dev/null | awk '{printf "  %-14s %-28s %-9s %-10s %s\n",$1,$2,$3,$5,$6}' || printf '  none\n'
+  step "helm releases"
+  _h list -A -o json 2>/dev/null | jq -r '.[]|"  \(.namespace)/\(.name)  \(.status)  \(.chart)"' || :
+  step "Prometheus targets: host exporters"
+  if _k -n monitoring get statefulset prometheus-kube-prometheus-stack-prometheus >/dev/null 2>&1; then
+    printf '  port-forward and query:\n'
+    printf '    kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090\n'
+    printf '    curl -s localhost:9090/api/v1/targets | jq -r ".data.activeTargets[]|select(.labels.job|startswith(\\"host-\\"))|\\"\\(.labels.job) \\(.health)\\""\n'
+    _k -n monitoring get secret host-scrape-configs >/dev/null 2>&1 \
+      && printf '  host-scrape-configs secret: present\n' \
+      || printf '  host-scrape-configs secret: MISSING\n'
+  else
+    printf '  monitoring not installed\n'
+  fi
+  exit 0
+fi
+
+(( DO_STORAGE )) && { step "storage";    platform_install_storage;    }
+(( DO_MON ))     && { step "monitoring"; platform_install_monitoring; }
+
+if [[ "$DRY_RUN" != 1 ]]; then
+  cat <<NEXT >&2
+
+  Verify storage:  kubectl apply -f workloads/plumbing/05-storage.yaml
+  Grafana:         kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80
+                   user admin, password:
+                     kubectl -n monitoring get secret kube-prometheus-stack-grafana \\
+                       -o jsonpath='{.data.admin-password}' | base64 -d; echo
+  Prometheus:      kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090
+NEXT
+fi

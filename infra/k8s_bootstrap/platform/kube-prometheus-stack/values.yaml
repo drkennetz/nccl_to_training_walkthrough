@@ -1,0 +1,129 @@
+# platform/kube-prometheus-stack/values.yaml -- monitoring for a scratch cluster.
+#
+# The single most important thing here: THIS CHART MUST NOT DEPLOY node-exporter.
+# The hosts already run one on :9100, along with dcgm-exporter on :9400 and the
+# provider's own rdma/nvlink/pcie exporters on :9500/:9600/:9700. The chart's node-exporter
+# binds hostPort 9100 and would collide with a daemon we are not allowed to touch
+# (CLAUDE.md rule 4). We scrape the host exporters instead -- less footprint AND
+# strictly better data, because the provider's nvlink/pcie/rdma/nccl metrics come
+# along for free.
+#
+# Static scrape targets are injected at install time by lib/platform.sh, since the
+# node addresses are only known then.
+#
+# Chart version pinned in versions.env (KUBE_PROMETHEUS_STACK_CHART_VERSION).
+
+# ---------------------------------------------------------------- do not deploy
+prometheus-node-exporter:
+  # Belt and braces: the subchart is disabled below, this stops it either way.
+  hostRootFsMount:
+    enabled: false
+
+nodeExporter:
+  enabled: false
+
+# ---------------------------------------------------------------- k3s realities
+# k3s runs the controller-manager, scheduler and etcd inside a single process and
+# exposes no separate Services for them, so these ServiceMonitors would only ever
+# produce permanently-down targets and noisy alerts. kube-proxy does not exist at
+# all -- Cilium replaces it (kubeProxyReplacement=true).
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+# ---------------------------------------------------------------- alerting
+# No paging destination on a cluster that lives for days, and the default rules
+# fire constantly against a 2-node cluster with components deliberately absent.
+alertmanager:
+  enabled: false
+defaultRules:
+  create: true
+  rules:
+    # These reference the components disabled above.
+    kubeControllerManager: false
+    kubeScheduler: false
+    etcd: false
+    kubeProxy: false
+    # Fires on a single-replica scratch cluster by design.
+    kubeStateMetrics: true
+
+# ---------------------------------------------------------------- prometheus
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    # Scrape anything we label, not only same-namespace objects.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    # On the big NVMe via the default StorageClass. local-path is node-local, so
+    # if this pod moves nodes the history is lost -- acceptable for a scratch
+    # cluster, and far better than filling the ~85G node root filesystem.
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 50Gi
+    # Must be able to run on the tainted control-plane tray if it is the only
+    # place with room.
+    tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+  service:
+    type: ClusterIP        # never a LoadBalancer -- CLAUDE.md rule 9
+
+# ---------------------------------------------------------------- grafana
+grafana:
+  enabled: true
+  # Reached with `kubectl -n monitoring port-forward svc/...`; no ingress and no
+  # LoadBalancer. The admin password is generated into a Secret by the chart.
+  service:
+    type: ClusterIP
+  persistence:
+    enabled: false          # dashboards come from the chart; nothing to preserve
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  # The NVIDIA DCGM dashboard, so the host's :9400 metrics are useful immediately.
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: gpu
+          orgId: 1
+          folder: GPU
+          type: file
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/gpu
+  dashboards:
+    gpu:
+      nvidia-dcgm:
+        # grafana.com dashboard 12239 = "NVIDIA DCGM Exporter Dashboard"
+        gnetId: 12239
+        revision: 2
+        datasource: Prometheus
+
+kube-state-metrics:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+
+prometheusOperator:
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule

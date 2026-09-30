@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# bin/k8s-preflight -- check whether candidate trays are safe to install on.
+#
+# Read-only. Run this before bin/k8s-up, and any time you want to know whether a
+# set of trays is usable. With --snapshot it also captures the "pre" baseline
+# that bin/k8s-verify-clean later diffs against.
+
+set -euo pipefail
+# shellcheck source=../lib/preflight.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/preflight.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-preflight [options]
+
+Selects candidate trays from a single rack and checks each one is safe to use.
+
+  --cluster NAME    cluster config (default: sole config in clusters/)
+  --workers N       worker trays to check, plus 1 for the control plane (default 3)
+  --rack LB/RACK    use this specific rack instead of auto-selecting
+  --nodes LIST      check exactly these nodes; skips selection entirely
+  --snapshot        also capture the 'pre' baseline for these trays
+  --verbose         show every PASS/INFO check, not just problems
+  -h, --help
+
+Exit 0 if every tray passed, 1 otherwise. The gates protect the node; if one
+fails, choose different trays rather than overriding it.
+USAGE
+}
+
+CLUSTER="" WORKERS=3 RACK="" NODES="" DO_SNAPSHOT=0
+while (($#)); do
+  case "$1" in
+    --cluster)  CLUSTER="${2:?}"; shift 2 ;;
+    --workers)  WORKERS="${2:?}"; shift 2 ;;
+    --rack)     RACK="${2:?}";    shift 2 ;;
+    --nodes)    NODES="${2:?}";   shift 2 ;;
+    --snapshot) DO_SNAPSHOT=1;    shift ;;
+    --verbose)  VERBOSE=1;        shift ;;
+    -h|--help)  usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+require_cmd ssh sinfo scontrol
+load_cluster "$CLUSTER"
+
+# ------------------------------------------------------------------ selection
+if [[ -n "$NODES" ]]; then
+  candidates="$NODES"
+  log "checking explicitly requested trays: ${candidates}"
+else
+  need=$(( WORKERS + 1 ))                       # +1 for the control-plane tray
+  mapfile -t trays < <(slurm_pick_verified_trays "$need" "$RACK")
+  # die() inside a process substitution exits only the subshell, so an empty
+  # result must be checked here or `set -u` trips on trays[0] with no explanation.
+  (( ${#trays[@]} == need )) || die "could not select ${need} identity-verified idle tray(s) from a single rack -- see bin/k8s-status for current capacity"
+  candidates="$(nodes_compress "${trays[@]}")"
+  rackid="$(slurm_node_rackid "${trays[0]}")"
+  log "selected ${need} tray(s) from rack ${rackid}: ${candidates}"
+  printf '    control plane : %s\n' "${trays[0]}" >&2
+  printf '    workers       : %s\n' "$(nodes_compress "${trays[@]:1}")" >&2
+  # One rack is one NVL72 domain, so a multi-rack pool would silently lose
+  # multi-node NVLink. Selection should never do this, but assert anyway.
+  if (( $(printf '%s\n' "${trays[@]}" | while read -r t; do slurm_node_rackid "$t"; echo; done | sort -u | grep -c .) > 1 )); then
+    die "internal error: selected trays span multiple racks"
+  fi
+fi
+
+# ------------------------------------------------------------------ checks
+rc=0
+preflight_nodes "$candidates" || rc=1
+
+if (( DO_SNAPSHOT )); then
+  if (( rc != 0 )); then
+    warn "skipping snapshot: preflight failed"
+  else
+    snapshot_nodes "$candidates" pre || rc=1
+    printf '\n  baseline written to %s/snapshots/pre/\n' "$STATE_DIR" >&2
+  fi
+fi
+
+if (( rc == 0 )); then
+  printf '\n'
+  ok "these trays are safe to install on"
+  printf '  next: bin/k8s-up --workers %s%s\n' "$WORKERS" \
+    "$([[ -n "$RACK" ]] && printf ' --rack %s' "$RACK")" >&2
+fi
+exit $rc

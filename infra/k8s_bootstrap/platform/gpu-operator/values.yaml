@@ -1,0 +1,108 @@
+# platform/gpu-operator/values.yaml -- NVIDIA GPU Operator, Path A (device plugin).
+#
+# The hosts are already fully provisioned by the cloud provider: driver 595.71.05,
+# nvidia-container-toolkit 1.20.0, nvidia-dcgm (nv-hostengine on :5555), a
+# dcgm-exporter on :9400, and an active nvidia-imex. We install NONE of that. The
+# operator is here for exactly two things:
+#
+#   - the device plugin, so pods can request nvidia.com/gpu
+#   - GPU Feature Discovery, so nodes carry nvidia.com/gpu.clique and friends
+#
+# Chart version is pinned in versions.env. Do not bump here.
+#
+# NOTE ON MODES: the chart offers two mutually exclusive stacks and says so --
+# "It is an invalid configuration for both CRs to exist."
+#   clusterPolicy.deployCR=true   -> device plugin framework (this file)
+#   gpuCluster.deployCR=true      -> Dynamic Resource Allocation (values-dra.yaml)
+# See platform/gpu-operator/values-dra.yaml.
+
+clusterPolicy:
+  deployCR: true
+gpuCluster:
+  deployCR: false
+
+# ---------------------------------------------------------------- host-owned: OFF
+# Every one of these would duplicate or fight something the host already runs.
+driver:
+  # Host driver is 595.71.05. Never let the operator manage a driver here: it
+  # would try to unload the running one out from under other Slurm users.
+  enabled: false
+
+toolkit:
+  # Host has nvidia-container-toolkit 1.20.0, and k3s has ALREADY auto-detected
+  # /usr/bin/nvidia-container-runtime and written the `nvidia` containerd runtime
+  # plus RuntimeClass. Enabling this would rewrite a container runtime config
+  # that Slurm users share through enroot/pyxis. CLAUDE.md rule 3.
+  enabled: false
+
+dcgm:
+  # Host runs nvidia-dcgm; nv-hostengine is bound to 127.0.0.1:5555.
+  enabled: false
+
+dcgmExporter:
+  # Host dcgm-exporter already serves :9400. The operator's version binds the
+  # same hostPort and would collide. Prometheus scrapes the host one instead
+  # (step 7), which also gets us the provider's nvlink/pcie/rdma/nccl exporters.
+  enabled: false
+
+nodeStatusExporter:
+  enabled: false
+
+migManager:
+  # GB300 here is used whole; no MIG partitioning.
+  enabled: false
+
+# Sandboxed / passthrough workloads are not part of this cluster.
+sandboxWorkloads:
+  enabled: false
+vfioManager:
+  enabled: false
+vgpuDeviceManager:
+  enabled: false
+vgpuManager:
+  enabled: false
+kataManager:
+  enabled: false
+gds:
+  enabled: false
+gdrcopy:
+  enabled: false
+
+# ---------------------------------------------------------------- what we DO want
+devicePlugin:
+  enabled: true
+
+gfd:
+  # Publishes nvidia.com/gpu.* node labels, including gpu.clique -- the label a
+  # multi-node NVLink job must pin on, since a clique is one rack.
+  enabled: true
+
+nfd:
+  # GFD depends on node-feature-discovery. The chart's NFD worker already
+  # tolerates the control-plane taint.
+  enabled: true
+
+cdi:
+  # CDI is how the runtime injects devices. containerd 2.x (k3s bundles 2.3.4)
+  # supports it natively.
+  #
+  # WATCH THIS: the host generates /var/run/cdi/nvidia.yaml and its sha256 is
+  # part of the do-no-harm baseline (CLAUDE.md rule 5). The operator must write
+  # its own spec to a separate file and leave the host's alone. bin/k8s-verify-clean
+  # checks the hash after teardown; if it ever changes, this is the first suspect.
+  enabled: true
+  nriPluginEnabled: false
+
+validator:
+  # The driver validator would look for a driver the operator manages; there
+  # isn't one. Plugin/CUDA validation still runs and is what we actually want.
+  driver:
+    env:
+      - name: DISABLE_DEV_CHAR_SYMLINK_CREATION
+        value: "true"
+
+# ---------------------------------------------------------------- scheduling
+# The control-plane tray is tainted NoSchedule; operator components should not
+# need it, but the daemonsets legitimately run on every GPU node.
+operator:
+  defaultRuntime: containerd

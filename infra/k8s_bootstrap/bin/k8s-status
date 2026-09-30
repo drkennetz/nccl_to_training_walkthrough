@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# bin/k8s-status -- report Slurm lease state and Kubernetes state side by side.
+# Read-only. Safe to run any time.
+
+set -euo pipefail
+# shellcheck source=../lib/slurm.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/slurm.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-status [--cluster NAME] [--nodes]
+
+  --cluster NAME  cluster config to load (default: sole config in clusters/)
+  --nodes         also list every leased tray and its Slurm state
+USAGE
+}
+
+SHOW_NODES=0 CLUSTER=""
+while (($#)); do
+  case "$1" in
+    --cluster) CLUSTER="${2:?}"; shift 2 ;;
+    --nodes)   SHOW_NODES=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+load_cluster "$CLUSTER"
+
+printf '\ncluster: %s   partition: %s   state: %s\n\n' \
+  "$CLUSTER_NAME" "${SLURM_PARTITION:-compute}" "$STATE_DIR"
+
+# ------------------------------------------------------------------ leases
+printf 'SLURM LEASES\n'
+leases=()
+mapfile -t leases < <(slurm_list_leases)
+if ((${#leases[@]} == 0)); then
+  printf '  none -- no trays held. Start one with: bin/k8s-up\n'
+else
+  printf '  %-26s %-9s %-10s %-6s %s\n' LEASE JOBID STATE TRAYS NODES
+  for l in "${leases[@]}"; do
+    jobid="$(slurm_lease_jobid "$l")"
+    nodes="$(slurm_lease_nodes "$l")"
+    printf '  %-26s %-9s %-10s %-6s %s\n' \
+      "$l" "${jobid:-?}" "$(slurm_lease_state "$l")" "$(nodes_count "$nodes")" "${nodes:-?}"
+  done
+  # A lease whose job is GONE means nodes were released without teardown.
+  for l in "${leases[@]}"; do
+    if [[ "$(slurm_lease_state "$l")" == GONE ]]; then
+      warn "lease '${l}' job has ended but state is still recorded -- run bin/k8s-verify-clean"
+    fi
+  done
+fi
+
+# ------------------------------------------------------------------ nodes
+if ((SHOW_NODES)); then
+  printf '\nLEASED TRAYS\n'
+  mapfile -t held < <(slurm_all_leased_nodes)
+  if ((${#held[@]} == 0)); then
+    printf '  none\n'
+  else
+    printf '  %-24s %-8s %-14s %s\n' NODE SLURM RACK REASON
+    for n in "${held[@]}"; do
+      st="$(sinfo -h -N -n "$n" -o '%t' 2>/dev/null | sort -u | paste -sd,)"
+      rs="$(sinfo -h -N -n "$n" -o '%E' 2>/dev/null | sort -u | head -1)"
+      printf '  %-24s %-8s %-14s %s\n' "$n" "${st:-?}" "$(slurm_node_rackid "$n")" "${rs:-}"
+    done
+  fi
+fi
+
+# ------------------------------------------------------------------ capacity
+printf '\nAVAILABLE CAPACITY (responsive idle trays, excluding: %s)\n' \
+  "${EXCLUDE_LOCALBLOCKS:-none}"
+caps="$(slurm_racks_by_capacity)"
+if [[ -z "$caps" ]]; then
+  printf '  none available right now\n'
+else
+  printf '  %-6s %s\n' TRAYS RACK
+  printf '%s\n' "$caps" | head -10 | while read -r c r; do printf '  %-6s %s\n' "$c" "$r"; done
+  total="$(printf '%s\n' "$caps" | awk '{s+=$1} END{print s+0}')"
+  printf '  %s trays total across %s rack(s); largest rack has %s\n' \
+    "$total" "$(printf '%s\n' "$caps" | grep -c .)" "$(printf '%s\n' "$caps" | head -1 | awk '{print $1}')"
+fi
+
+# ------------------------------------------------------------------ kubernetes
+printf '\nKUBERNETES\n'
+kubeconfig="$(state_path kubeconfig)"
+if [[ ! -s "$kubeconfig" ]]; then
+  printf '  no kubeconfig at %s -- cluster not bootstrapped yet\n' "$kubeconfig"
+elif ! command -v kubectl >/dev/null 2>&1; then
+  printf '  kubeconfig present but kubectl is not installed (bin/k8s-install-tools)\n'
+elif ! KUBECONFIG="$kubeconfig" kubectl get --raw='/readyz' >/dev/null 2>&1; then
+  printf '  API server at %s is not responding\n' \
+    "$(KUBECONFIG="$kubeconfig" kubectl config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)"
+else
+  export KUBECONFIG="$kubeconfig"
+  kubectl get nodes -o custom-columns=\
+'NAME:.metadata.name,STATUS:.status.conditions[-1].type,ROLE:.metadata.labels.node-role\.kubernetes\.io/control-plane,GPUS:.status.capacity.nvidia\.com/gpu,CLIQUE:.metadata.labels.nvidia\.com/gpu\.clique,VERSION:.status.nodeInfo.kubeletVersion' \
+    2>/dev/null | sed 's/^/  /'
+  printf '\n  workloads not Running/Succeeded:\n'
+  bad="$(kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded \
+          --no-headers 2>/dev/null | head -15)"
+  [[ -n "$bad" ]] && sed 's/^/    /' <<<"$bad" || printf '    none\n'
+fi
+printf '\n'

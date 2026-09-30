@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# bin/k8s-verify-clean -- prove borrowed nodes were returned as we found them.
+#
+# The acceptance test for do-no-harm. Captures a 'post' snapshot, diffs it
+# against the 'pre' baseline, and independently confirms Slurm still considers
+# the nodes healthy. Exits nonzero on ANY drift -- there is no "close enough".
+
+set -euo pipefail
+# shellcheck source=../lib/preflight.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/preflight.sh"
+# shellcheck source=../lib/drift.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/drift.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-verify-clean [options]
+
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --nodes LIST     nodes to verify (default: every node with a 'pre' baseline)
+  --skip-capture   diff an already-captured 'post' snapshot instead of re-taking it
+  --verbose        show full diffs rather than a summary
+  -h, --help
+
+Exit 0 only if every node is byte-identical to its baseline (excluding fields
+that legitimately churn) AND Slurm reports it usable.
+USAGE
+}
+
+CLUSTER="" NODES="" SKIP_CAPTURE=0
+while (($#)); do
+  case "$1" in
+    --cluster)      CLUSTER="${2:?}"; shift 2 ;;
+    --nodes)        NODES="${2-}"; [[ -n "$NODES" ]] || die "--nodes needs a value"; shift 2 ;;
+    --skip-capture) SKIP_CAPTURE=1; shift ;;
+    --verbose)      VERBOSE=1; shift ;;
+    -h|--help)      usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+load_cluster "$CLUSTER"
+
+# Default to whatever we have a baseline for: those are the nodes we touched.
+if [[ -z "$NODES" ]]; then
+  mapfile -t baselined < <(find "${STATE_DIR}/snapshots/pre" -maxdepth 1 -mindepth 1 \
+                             -type d -printf '%f\n' 2>/dev/null | sort)
+  ((${#baselined[@]})) || die "no 'pre' baselines in ${STATE_DIR}/snapshots/pre -- nothing to verify"
+  NODES="$(nodes_compress "${baselined[@]}")"
+fi
+mapfile -t nodes < <(nodes_expand "$NODES")
+
+step "verifying ${#nodes[@]} tray(s): $(nodes_compress "${nodes[@]}")"
+
+# ------------------------------------------------------------------ capture
+if (( ! SKIP_CAPTURE )); then
+  reachable=()
+  for n in "${nodes[@]}"; do
+    if node_ssh_ro "$n" true >/dev/null 2>&1; then reachable+=("$n")
+    else warn "${n}: unreachable; cannot capture 'post' state"; fi
+  done
+  ((${#reachable[@]})) && snapshot_nodes "$(nodes_compress "${reachable[@]}")" post || true
+fi
+
+# ------------------------------------------------------------------ diff
+printf '\n'
+step "state comparison (pre vs post)"
+drifted=0 verified=0 skipped=0
+for n in "${nodes[@]}"; do
+  if [[ ! -d "${STATE_DIR}/snapshots/post/${n}" ]]; then
+    warn "${n}: no 'post' snapshot -- UNVERIFIED"; skipped=$((skipped+1)); continue
+  fi
+  pre="${STATE_DIR}/snapshots/pre/${n}"; post="${STATE_DIR}/snapshots/post/${n}"
+  if out="$(snapshot_diff_node "$n" 2>&1)" && [[ -z "$out" ]]; then
+    ok "${n}: pristine"
+    verified=$((verified+1))
+    continue
+  fi
+
+  # Which files differ, then judge each one. A file "changing" is not itself a
+  # verdict -- some differences are unavoidable consequences of loading kernel
+  # modules we cannot safely unload.
+  mapfile -t changed < <(
+    { sed -n 's|^diff .*/snapshots/pre/[^/]*/\([^ ]*\) .*|\1|p' <<<"$out"
+      sed -n 's|^Only in .*/snapshots/\(pre\|post\)/[^/]*: \(.*\)|\2|p' <<<"$out"
+    } | sort -u | grep . )
+
+  node_real=0 node_benign=()
+  for f in "${changed[@]}"; do
+    if verdict="$(drift_classify "$pre" "$post" "$f")"; then
+      node_benign+=("${f}: ${verdict#BENIGN }")
+    else
+      (( node_real == 0 )) && err "${n}: DRIFT"
+      printf '      %-16s %s\n' "$f" "${verdict#REAL }" >&2
+      node_real=$((node_real+1))
+    fi
+  done
+
+  if (( node_real > 0 )); then
+    [[ "$VERBOSE" == 1 ]] && sed 's/^/        /' <<<"$out" >&2
+    (( ${#node_benign[@]} )) && printf '      (%s benign difference(s) also present)\n' "${#node_benign[@]}" >&2
+    drifted=$((drifted+1))
+  else
+    ok "${n}: pristine (${#node_benign[@]} benign kernel difference(s))"
+    if [[ "$VERBOSE" == 1 ]]; then
+      printf '      %s\n' "${node_benign[@]}" >&2
+    fi
+    verified=$((verified+1))
+  fi
+done
+
+# ------------------------------------------------------------------ slurm health
+printf '\n'
+step "Slurm health"
+slurm_bad=0
+printf '  %-24s %-10s %s\n' NODE STATE REASON
+for n in "${nodes[@]}"; do
+  st="$(sinfo -h -N -n "$n" -o '%t' 2>/dev/null | sort -u | paste -sd,)"
+  rs="$(sinfo -h -N -n "$n" -o '%E' 2>/dev/null | sort -u | head -1)"
+  printf '  %-24s %-10s %s\n' "$n" "${st:-unknown}" "${rs:-}"
+  case "$st" in
+    idle|alloc|mix|comp) ;;                     # healthy or legitimately busy
+    drain*|down*|*drng*|fail*)
+      err "  ${n} is '${st}' -- we may have left it unusable"; slurm_bad=$((slurm_bad+1)) ;;
+    *) warn "  ${n} unexpected state '${st}'"; slurm_bad=$((slurm_bad+1)) ;;
+  esac
+done
+
+# Slurm itself must still be answering, not just the nodes.
+if scontrol ping >/dev/null 2>&1; then ok "slurmctld responding"
+else err "slurmctld not responding"; slurm_bad=$((slurm_bad+1)); fi
+
+# A lease still recorded here means nodes were released without teardown.
+leftover="$(slurm_list_leases | paste -sd,)"
+[[ -n "$leftover" ]] && warn "leases still recorded: ${leftover} (run bin/k8s-down)"
+
+# ------------------------------------------------------------------ verdict
+printf '\n'
+if (( drifted == 0 && skipped == 0 && slurm_bad == 0 )); then
+  ok "CLEAN -- ${verified}/${#nodes[@]} tray(s) identical to baseline, Slurm healthy"
+  exit 0
+fi
+err "NOT CLEAN -- ${drifted} drifted, ${skipped} unverified, ${slurm_bad} Slurm problem(s)"
+printf '%s\n' "  Remediate with: node/teardown.sh on the affected trays, then re-run." >&2
+exit 1

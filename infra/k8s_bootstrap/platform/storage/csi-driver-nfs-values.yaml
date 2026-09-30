@@ -1,0 +1,42 @@
+# platform/storage/csi-driver-nfs-values.yaml -- RWX volumes on the shared NFS.
+#
+# local-path (the default StorageClass) is node-local and RWO: right for scratch
+# and checkpoints on the 28T NVMe, useless for anything two nodes must both read.
+# Multi-node training needs datasets and weights visible everywhere, which is what
+# this is for.
+#
+# server / share / mountOptions / subDir come from the cluster config and are
+# passed with --set at install time -- they are per-cluster facts, not defaults.
+#
+# Chart version pinned in versions.env (CSI_DRIVER_NFS_CHART_VERSION).
+
+# The chart can create the StorageClass, but only with values we must supply at
+# install time, so lib/platform.sh sets storageClass.* via --set.
+storageClass:
+  create: true
+
+controller:
+  replicas: 1
+  # The control-plane tray is tainted NoSchedule and there may be only one worker,
+  # so let the controller run anywhere rather than risk it being unschedulable.
+  runOnControlPlane: true
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+  # The NFS server is resolved by its cluster-external FQDN, so the controller
+  # needs the node's resolver as well as CoreDNS.
+  dnsPolicy: ClusterFirstWithHostNet
+
+node:
+  dnsPolicy: ClusterFirstWithHostNet
+  tolerations:
+    - operator: Exists
+
+# Not needed on a scratch cluster; fewer moving parts and fewer arm64 images to
+# verify. Enable if volume snapshots are ever actually wanted.
+externalSnapshotter:
+  enabled: false
+
+feature:
+  enableFSGroupPolicy: true

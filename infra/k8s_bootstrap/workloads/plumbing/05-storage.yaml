@@ -1,0 +1,139 @@
+# workloads/plumbing/05-storage.yaml -- do both StorageClasses actually work?
+#
+# Gate 5. Two classes with genuinely different jobs, so both are tested:
+#
+#   local-path  RWO, node-local, on the 28T NVMe -- scratch and checkpoints
+#   nfs         RWX, shared     -- datasets and weights for multi-node work
+#
+# The RWX half is the one worth being careful about: a volume that merely mounts
+# on one node proves nothing. The DaemonSet writes one file per node and the
+# check Job asserts it can see files from MORE THAN ONE node, which is the only
+# thing that distinguishes RWX from RWO.
+#
+#   kubectl apply -f workloads/plumbing/05-storage.yaml
+#   kubectl wait --for=condition=complete job/storage-check --timeout=300s
+#   kubectl logs job/storage-check
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-scratch
+spec:
+  # No storageClassName: this asserts local-path really is the DEFAULT class.
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shared-data
+spec:
+  storageClassName: nfs
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 1Gi
+---
+# One writer per node, including the tainted control-plane tray, so the shared
+# volume is genuinely mounted from more than one machine at once.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nfs-writer
+spec:
+  selector: {matchLabels: {app: nfs-writer}}
+  template:
+    metadata:
+      labels: {app: nfs-writer}
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: writer
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              echo "$(date -Is) written by ${NODE_NAME}" > "/data/node-${NODE_NAME}.txt"
+              # Stay alive so the volume remains mounted while the check runs.
+              exec sleep 3600
+          env:
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+          volumeMounts:
+            - {name: shared, mountPath: /data}
+      volumes:
+        - name: shared
+          persistentVolumeClaim: {claimName: shared-data}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: storage-check
+  labels: {app: k8s-bootstrap-plumbing, gate: "5"}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              fail=0
+              echo "== local-path (RWO, default class) =="
+              echo "  mount: $(df -h /scratch | tail -1)"
+              if dd if=/dev/zero of=/scratch/probe bs=1M count=64 2>/dev/null && \
+                 [ "$(stat -c %s /scratch/probe)" = "67108864" ]; then
+                echo "  wrote and verified 64MiB"
+              else
+                echo "  FAILED to write 64MiB"; fail=$((fail+1))
+              fi
+              echo "test-payload" > /scratch/roundtrip
+              if [ "$(cat /scratch/roundtrip)" = "test-payload" ]; then
+                echo "  round-trip ok"
+              else
+                echo "  round-trip FAILED"; fail=$((fail+1))
+              fi
+              rm -f /scratch/probe
+
+              echo "== nfs (RWX, shared across nodes) =="
+              echo "  mount: $(df -h /shared | tail -1)"
+              # The writers are a DaemonSet and may not all have landed yet.
+              for i in $(seq 1 60); do
+                n=$(ls /shared/node-*.txt 2>/dev/null | wc -l)
+                [ "${n:-0}" -ge 2 ] && break
+                sleep 2
+              done
+              n=$(ls /shared/node-*.txt 2>/dev/null | wc -l)
+              echo "  files from distinct nodes: ${n}"
+              ls -1 /shared/node-*.txt 2>/dev/null | sed 's|^|    |'
+              # THE point of the RWX test. One file could be a plain RWO volume.
+              if [ "${n:-0}" -ge 2 ]; then
+                echo "  multi-node visibility confirmed"
+              else
+                echo "  FAILED: only ${n:-0} node(s) visible -- not proven RWX"; fail=$((fail+1))
+              fi
+              if echo "checked by ${HOSTNAME}" > /shared/checked-by.txt; then
+                echo "  writable from this pod too"
+              else
+                echo "  FAILED: not writable"; fail=$((fail+1))
+              fi
+
+              echo
+              if [ "$fail" -eq 0 ]; then echo "STORAGE-OK"; else echo "STORAGE-FAILED (${fail})"; exit 1; fi
+          volumeMounts:
+            - {name: scratch, mountPath: /scratch}
+            - {name: shared,  mountPath: /shared}
+      volumes:
+        - name: scratch
+          persistentVolumeClaim: {claimName: local-scratch}
+        - name: shared
+          persistentVolumeClaim: {claimName: shared-data}

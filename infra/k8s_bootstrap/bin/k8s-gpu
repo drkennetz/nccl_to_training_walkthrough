@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# bin/k8s-gpu -- install and inspect the NVIDIA GPU stack.
+#
+# The hosts already have the driver, container toolkit, DCGM and IMEX. The
+# operator is installed only for the device plugin and GPU Feature Discovery
+# (or, with --dra, for the DRA driver instead).
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-gpu [options]
+
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --dra            install the DRA stack instead of the device plugin
+  --status         report GPU/DRA state and exit (read-only)
+  --template       print the rendered manifests and exit (no cluster needed)
+  --dry-run        show what would be installed
+  -h, --help
+
+Modes are MUTUALLY EXCLUSIVE -- the chart rejects having both CRs present:
+
+  default   ClusterPolicy  -> pods request  resources.limits."nvidia.com/gpu"
+  --dra     GPUCluster     -> pods reference a ResourceClaim on gpu.nvidia.com
+
+DRA itself is GA (Kubernetes 1.34+, resource.k8s.io/v1). NVIDIA's DRA driver is
+still marked experimental. ComputeDomain (multi-node NVLink) stays disabled
+either way: enabling it would mask the host's provider-managed nvidia-imex.
+USAGE
+}
+
+CLUSTER="" MODE=deviceplugin ACTION=install
+while (($#)); do
+  case "$1" in
+    --cluster)  CLUSTER="${2:?}"; shift 2 ;;
+    --dra)      MODE=dra; shift ;;
+    --status)   ACTION=status; shift ;;
+    --template) ACTION=template; shift ;;
+    --dry-run)  DRY_RUN=1; shift ;;
+    -h|--help)  usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+if [[ "$ACTION" == template ]]; then
+  platform_gpu_operator_template "$MODE"; exit 0
+fi
+
+require_not_root
+load_cluster "$CLUSTER"
+
+if [[ "$ACTION" == status ]]; then
+  platform_require_tools
+  step "GPU nodes"
+  KUBECONFIG="$(state_path kubeconfig)" kubectl get nodes -o custom-columns=\
+'NODE:.metadata.name,CAP:.status.capacity.nvidia\.com/gpu,ALLOC:.status.allocatable.nvidia\.com/gpu,PRODUCT:.metadata.labels.nvidia\.com/gpu\.product,CLIQUE:.metadata.labels.nvidia\.com/gpu\.clique,DRIVER:.metadata.labels.nvidia\.com/cuda\.driver-version\.full' \
+    2>/dev/null | sed 's/^/  /'
+  step "DRA capability"
+  platform_dra_capability
+  step "gpu-operator pods"
+  KUBECONFIG="$(state_path kubeconfig)" kubectl -n gpu-operator get pods --no-headers 2>/dev/null \
+    | awk '{printf "  %-52s %-8s %s\n", $1, $2, $3}' || printf '  none\n'
+  exit 0
+fi
+
+# The DRA stack needs the cluster to actually serve the DeviceClass API. Check
+# before installing so the failure is a clear message rather than a chart error.
+if [[ "$MODE" == dra && "$DRY_RUN" != 1 ]]; then
+  platform_require_tools
+  if ! KUBECONFIG="$(state_path kubeconfig)" kubectl api-resources \
+        --api-group=resource.k8s.io --no-headers 2>/dev/null | grep -q deviceclasses; then
+    die "this cluster does not serve resource.k8s.io DeviceClass; DRA is unavailable"
+  fi
+  warn "installing the EXPERIMENTAL DRA stack; nvidia.com/gpu will no longer exist"
+fi
+
+platform_install_gpu_operator "$MODE"
+
+if [[ "$DRY_RUN" != 1 ]]; then
+  printf '\n'
+  if [[ "$MODE" == dra ]]; then
+    printf '  next: kubectl apply -f workloads/plumbing/04-dra-gpu.yaml\n' >&2
+  else
+    printf '  next: kubectl apply -f workloads/plumbing/03-gpu-resource.yaml\n' >&2
+  fi
+fi

@@ -1,0 +1,44 @@
+# workloads/plumbing/01-gpu-smoke.yaml -- can a pod see the GPUs at all?
+#
+# Gate 1 of 3. Uses runtimeClassName: nvidia, which k3s created automatically
+# after detecting /usr/bin/nvidia-container-runtime on the host. At this stage the
+# GPU Operator is NOT installed, so there is no nvidia.com/gpu resource to
+# request yet -- this deliberately proves the RUNTIME path works before the
+# device plugin is added in step 6.
+#
+#   kubectl apply -f workloads/plumbing/01-gpu-smoke.yaml
+#   kubectl logs job/gpu-smoke
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-smoke
+  labels: {app: k8s-bootstrap-plumbing, gate: "1"}
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels: {app: k8s-bootstrap-plumbing}
+    spec:
+      restartPolicy: Never
+      runtimeClassName: nvidia
+      # Land on a GPU worker, not the tainted control-plane tray.
+      nodeSelector:
+        k8s-bootstrap.io/role: worker
+      containers:
+        - name: smoke
+          # CUDA base image, multi-arch (linux/arm64 present) -- everything here
+          # is aarch64, so an amd64-only image is the usual first-run failure.
+          image: nvcr.io/nvidia/cuda:13.0.1-base-ubuntu24.04
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -e
+              echo "node   : ${NODE_NAME}"
+              echo "arch   : $(uname -m)"
+              nvidia-smi -L
+              echo "count  : $(nvidia-smi -L | grep -c '^GPU')"
+              nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+              echo "GPU-SMOKE-OK"
+          env:
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}

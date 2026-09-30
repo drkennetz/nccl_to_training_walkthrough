@@ -1,0 +1,81 @@
+# workloads/plumbing/06-monitoring.yaml -- is Prometheus actually scraping the
+# HOST exporters, and did we avoid deploying colliding ones?
+#
+# Gate 6. Runs inside the cluster so it can reach the Prometheus service without
+# a port-forward. It asserts three things, in order of importance:
+#
+#   1. every host-* job is UP -- these are the provider's exporters on :9100,
+#      :9400, :9500, :9600 and :9700, scraped rather than duplicated. (:9876 is
+#      NOT an exporter -- it is a file server whose /metrics returns 404.)
+#   2. GPU metrics are actually arriving (DCGM_FI_DEV_GPU_UTIL exists), so the
+#      dcgm-exporter target is not merely reachable but useful
+#   3. we did NOT deploy a node-exporter of our own, which would have collided
+#      with the host's on hostPort 9100
+#
+#   kubectl apply -f workloads/plumbing/06-monitoring.yaml
+#   kubectl wait --for=condition=complete job/monitoring-check --timeout=300s
+#   kubectl logs job/monitoring-check
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: monitoring-check
+  labels: {app: k8s-bootstrap-plumbing, gate: "6"}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              P=http://kube-prometheus-stack-prometheus.monitoring.svc:9090
+              fail=0
+
+              echo "== waiting for Prometheus to answer =="
+              for i in $(seq 1 60); do
+                curl -sf --max-time 5 "$P/-/ready" >/dev/null 2>&1 && { echo "  ready after ${i}s"; break; }
+                sleep 2
+              done
+              curl -sf --max-time 5 "$P/-/ready" >/dev/null 2>&1 || { echo "FAIL: Prometheus not ready"; exit 1; }
+
+              echo "== host exporter targets =="
+              # Give the first scrape a chance to land.
+              sleep 35
+              t=$(curl -sf --max-time 10 "$P/api/v1/targets?state=active")
+              for job in host-node-exporter host-dcgm-exporter host-rdma-counters \
+                         host-nvlink-counters host-pcie-faults; do
+                up=$(echo "$t" | tr ',' '\n' | grep -c "\"job\":\"${job}\"" || true)
+                health=$(echo "$t" | sed 's/},{/}\n{/g' | grep "\"job\":\"${job}\"" | grep -c '"health":"up"' || true)
+                if [ "${health:-0}" -ge 1 ]; then
+                  echo "  ${job}: UP (${health} target(s))"
+                else
+                  echo "  ${job}: NOT UP (found ${up:-0} target(s))"; fail=$((fail+1))
+                fi
+              done
+
+              echo "== GPU metrics actually arriving? =="
+              v=$(curl -sf --max-time 10 --get "$P/api/v1/query" \
+                    --data-urlencode 'query=count(DCGM_FI_DEV_GPU_UTIL)' \
+                  | sed 's/.*"value":\[[^,]*,"\([^"]*\)".*/\1/')
+              if [ -n "$v" ] && [ "$v" != "null" ]; then
+                echo "  DCGM_FI_DEV_GPU_UTIL series: ${v}"
+              else
+                echo "  no DCGM series -- dcgm-exporter reachable but not producing"; fail=$((fail+1))
+              fi
+
+              echo "== we must NOT have deployed our own node-exporter =="
+              ne=$(curl -sf --max-time 10 --get "$P/api/v1/query" \
+                     --data-urlencode 'query=count(up{job="node-exporter"})' \
+                   | grep -c '"value"' || true)
+              if [ "${ne:-0}" -eq 0 ]; then
+                echo "  no in-cluster node-exporter job (correct: host owns :9100)"
+              else
+                echo "  FAILED: an in-cluster node-exporter exists; it would collide on hostPort 9100"
+                fail=$((fail+1))
+              fi
+
+              echo
+              if [ "$fail" -eq 0 ]; then echo "MONITORING-OK"; else echo "MONITORING-FAILED (${fail})"; exit 1; fi

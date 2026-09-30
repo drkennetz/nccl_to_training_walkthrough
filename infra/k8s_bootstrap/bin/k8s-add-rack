@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+# bin/k8s-add-rack -- lease trays from an ADDITIONAL rack and join them as workers.
+#
+# A rack is the scaling unit: 18 trays = one NVL72 NVLink domain = one CliqueId.
+# Multi-node NVLink works only *within* a rack, so every tray this adds comes
+# from exactly one rack and the new nodes share a single nvidia.com/gpu.clique
+# label. A job that needs multi-node NVLink pins on that label; a job spanning
+# two racks gets no NVLink between them and would need RDMA, which pods do not
+# have here.
+#
+# Each rack gets its own placeholder lease, so racks can come and go without
+# disturbing the API server -- which lives on the separate, longer-lived
+# control-plane lease.
+#
+# The control plane must already be up: this joins agents, it does not bootstrap.
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-add-rack [options]
+
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --rack LB/RACK   pin to a specific rack instead of auto-selecting
+  --trays N|max    worker trays to lease from that rack (default 3)
+                   'max' takes every identity-verified idle tray it has
+  --lease-time T   Slurm walltime for the lease (e.g. 04:00:00); default from cluster config
+  --no-wait        do not wait for the new nodes to report Ready
+  --dry-run        print the plan without touching Slurm or any node
+  --yes            do not prompt for confirmation
+  -h, --help
+
+Auto-selection skips racks we already hold: Slurm cannot add nodes to a running
+job, and one lease maps to one rack, so growing a rack in place is not possible.
+Add a different rack, or bin/k8s-remove-rack the one you have and re-add it larger.
+USAGE
+}
+
+CLUSTER="" RACK="" TRAYS=3 LEASE_TIME="" DO_WAIT=1
+while (($#)); do
+  case "$1" in
+    --cluster)    CLUSTER="${2:?}"; shift 2 ;;
+    --rack)       RACK="${2:?}"; shift 2 ;;
+    --trays)      TRAYS="${2:?}"; shift 2 ;;
+    --lease-time) LEASE_TIME="${2:?}"; shift 2 ;;
+    --no-wait)    DO_WAIT=0; shift ;;
+    --dry-run)    DRY_RUN=1; shift ;;
+    --yes)        ASSUME_YES=1; shift ;;
+    -h|--help)    usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+require_cmd ssh curl sinfo sbatch scontrol
+load_cluster "$CLUSTER"
+# Must come after load_cluster: sourcing the cluster config would overwrite this.
+if [[ -n "$LEASE_TIME" ]]; then
+  LEASE_RACK_TIME="$LEASE_TIME"
+  warn "lease walltime overridden to ${LEASE_TIME}"
+fi
+
+[[ "$TRAYS" == max || "$TRAYS" =~ ^[0-9]+$ ]] || die "--trays takes a number or 'max', got '${TRAYS}'"
+[[ "$TRAYS" == max ]] || (( TRAYS > 0 )) || die "--trays must be at least 1"
+
+# ------------------------------------------------------------------ 0. require slurm
+# Fail in 4ms rather than stalling for two minutes: every sinfo below blocks for
+# the full MessageTimeout when slurmctld is down. add-rack cannot work at all
+# without Slurm -- it needs both node selection and sbatch.
+slurm_require_ctld
+
+# ------------------------------------------------------------------ 0. require a cluster
+# This command joins agents; it cannot invent a control plane. Checking up front
+# turns a confusing mid-run failure (no join token) into one clear sentence.
+state_has kubeconfig || die "no cluster is up (no kubeconfig at $(state_path kubeconfig)). Use bin/k8s-up first."
+state_has node-token || die "no join token recorded; the control plane was not installed by us. Use bin/k8s-up."
+CP="$(state_read controlplane)"
+[[ -n "$CP" ]] || die "no control-plane node recorded; use bin/k8s-up first"
+slurm_lease_alive controlplane \
+  || die "the control-plane lease is not alive -- the API server tray is not held. Run bin/k8s-status."
+
+# ------------------------------------------------------------------ 1. select
+if [[ -n "$RACK" ]]; then
+  slurm_rackid_valid "$RACK" || die "--rack must look like <localblock>/<rack>${FLAT_RACKID:+ (this cluster has one: ${FLAT_RACKID})}, got '${RACK}'"
+  if slurm_rack_is_leased "$RACK"; then
+    die "rack ${RACK} is already held by lease '$(slurm_lease_name_for_rack "$RACK")'. Slurm cannot grow a running job; remove it first or add a different rack."
+  fi
+fi
+
+SKIP="$(slurm_leased_rackids)"
+[[ -n "$SKIP" ]] && log "already holding rack(s): ${SKIP% }"
+
+if [[ "$TRAYS" == max ]]; then
+  # Resolve the rack first (ranking only needs to know we want at least one),
+  # then ask that rack how many trays it can really supply. Counting idle trays
+  # is not enough: a rack whose idle trays are unreachable would over-promise.
+  target_rack="$RACK"
+  if [[ -z "$target_rack" ]]; then
+    mapfile -t ranked < <(slurm_rank_racks 1)
+    for r in ${ranked[@]+"${ranked[@]}"}; do
+      [[ " ${SKIP} " == *" ${r} "* ]] && continue
+      target_rack="$r"; break
+    done
+    [[ -n "$target_rack" ]] || die "no unleased rack has any responsive idle trays"
+  fi
+  log "counting identity-verified idle trays in ${target_rack}"
+  TRAYS="$(slurm_rack_verified_count "$target_rack")"
+  (( TRAYS > 0 )) || die "rack ${target_rack} has no identity-verified idle trays right now"
+  RACK="$target_rack"
+  ok "rack ${RACK} can supply ${TRAYS} tray(s)"
+fi
+
+mapfile -t trays < <(slurm_pick_verified_trays "$TRAYS" "$RACK" "$SKIP")
+# die() inside a process substitution exits only the subshell, so an empty result
+# must be checked here or `set -u` trips on trays[0] with no explanation.
+(( ${#trays[@]} == TRAYS )) \
+  || die "could not select ${TRAYS} identity-verified idle tray(s) from a single unleased rack -- see bin/k8s-status for current capacity"
+
+RACKID="$(slurm_node_rackid "${trays[0]}")"
+NEW="$(nodes_compress "${trays[@]}")"
+LEASE="$(slurm_lease_name_for_rack "$RACKID")"
+
+# Belt and braces: auto-selection skips leased racks, but --rack and the ranking
+# path both reach here, so assert the invariant rather than assume it.
+slurm_rack_is_leased "$RACKID" \
+  && die "internal: selected rack ${RACKID} is already leased as '${LEASE}'"
+
+step "plan"
+cat <<PLAN >&2
+  cluster        : ${CLUSTER_NAME}
+  new rack       : ${RACKID}   (its own NVL72 NVLink domain / CliqueId)
+  new trays      : ${NEW}   (${TRAYS})
+  new lease      : ${LEASE}   (walltime ${LEASE_RACK_TIME:-3-00:00:00})
+  joining        : $(provider_server_url 2>/dev/null || echo '<control plane>')
+  already held   : ${SKIP:-<nothing>}
+PLAN
+
+[[ "$DRY_RUN" == 1 ]] || confirm "Lease ${TRAYS} tray(s) from ${RACKID} and join them?" \
+  || die "aborted by user"
+
+# ------------------------------------------------------------------ 2. preflight
+# Same order as bring-up: nothing mutates a node until we hold a baseline to be
+# judged against at teardown.
+step "preflight"
+preflight_nodes "$NEW" || die "preflight failed -- refusing to install"
+
+step "baseline snapshot"
+snapshot_nodes "$NEW" pre || die "could not capture baseline -- refusing to install"
+
+# ------------------------------------------------------------------ 3. lease
+step "leasing trays"
+slurm_lease_rack "$RACKID" "$NEW" >/dev/null
+slurm_wait_lease "$LEASE"
+
+# ------------------------------------------------------------------ 4. join
+step "joining workers"
+provider_install_agents "$NEW" || die "one or more agents failed to join; run bin/k8s-remove-rack --rack ${RACKID} to hand these trays back"
+
+# ------------------------------------------------------------------ 5. wait
+if (( DO_WAIT )) && [[ "$DRY_RUN" != 1 ]]; then
+  step "waiting for the new nodes to report Ready"
+  waited=0
+  while (( waited < 180 )); do
+    ready=0
+    for n in "${trays[@]}"; do
+      # Deliberately NOT jsonpath: rkc flattens its args with $*, so the remote
+      # shell chokes on the parens and quotes ("syntax error near unexpected
+      # token `('") and this loop would never match. The STATUS column is
+      # metacharacter-free and survives either path.
+      [[ "$(kbin 20 get node "${n,,}" --no-headers 2>/dev/null | awk '{print $2}')" == Ready ]] \
+        && ready=$((ready+1))
+    done
+    (( ready == ${#trays[@]} )) && { ok "all ${ready} new node(s) Ready"; break; }
+    sleep 10; waited=$((waited+10))
+  done
+  (( waited < 180 )) || warn "not every new node reported Ready within 180s -- check bin/k8s-status"
+fi
+
+# ------------------------------------------------------------------ 6. report
+step "result"
+if [[ "$DRY_RUN" != 1 ]]; then
+  # kbin, not rkc: the escaped dots in these label keys do not survive rkc's
+  # remote re-parse, which makes every label column read <none> instead of failing.
+  kbin 30 get nodes -o custom-columns=\
+'NAME:.metadata.name,STATUS:.status.conditions[-1].type,RACK:.metadata.labels.k8s-bootstrap\.io/rack,GPUS:.status.allocatable.nvidia\.com/gpu,CLIQUE:.metadata.labels.nvidia\.com/gpu\.clique' \
+    2>/dev/null | sed 's/^/  /' || warn "could not list nodes"
+  cat <<NEXT >&2
+
+  Rack ${RACKID} is now part of the cluster as lease '${LEASE}'.
+
+  Pods needing multi-node NVLink must pin to ONE rack, e.g.
+    nodeSelector: { k8s-bootstrap.io/rack: "${RACKID#*/}" }
+  or on the clique label, which is the topology-correct choice:
+    nodeSelector: { nvidia.com/gpu.clique: "<ClusterUUID>.<CliqueId>" }
+
+  Hand this rack back on its own with:
+    bin/k8s-remove-rack --rack ${RACKID}
+NEXT
+  # GPUs are only schedulable once the device plugin exists, which is bin/k8s-gpu's
+  # job -- the same trap that makes a fresh cluster's GPU pods pend.
+  if ! kbin 20 get ns gpu-operator >/dev/null 2>&1; then
+    warn "the GPU Operator is not installed, so nvidia.com/gpu does not exist as a"
+    warn "  schedulable resource on these nodes either. Run bin/k8s-gpu."
+  fi
+fi
+ok "rack ${RACKID} added"

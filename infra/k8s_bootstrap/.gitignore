@@ -1,0 +1,17 @@
+# Cluster state never belongs in the repo -- it lives in $STATE_DIR.
+*.kubeconfig
+kubeconfig
+*.token
+node-token
+secrets/
+*.pem
+*.key
+!clusters/*.env
+
+# Snapshots taken before install (contain host iptables dumps etc.)
+snapshots/
+
+# Local scratch
+*.log
+*.tmp
+.DS_Store
