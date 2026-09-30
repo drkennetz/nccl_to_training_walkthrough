@@ -6,6 +6,39 @@ before/after evidence (Baseline → Hypothesis → Change → Measurement → Co
 extends to multi-node production. This runbook is organised in that order. Every number quoted is in
 `results/SUMMARY.md` and comes from a committed `result.json`.
 
+## Overview — what I am going to run, and why
+
+Two groups of experiments, all launched the same way (one Kubernetes Job per experiment from
+`deploy/k8s/matrix.yaml`, run by `deploy/k8s/run_matrix.sh`, results collected into `results/raw/<id>/`):
+
+**To prove out the network and the tuning** (slides 4, 5, 8, 9, 10):
+- `e1-nvlink`, `e1-rdma`, `e1-tcp`, `e1-tcprail` — the same 8-GPU all-reduce over the three transports, 1 MiB → 8 GiB (slide 4)
+- `e1-nvlink-small`, `e1-rdma-small` — the same collective from 4 KiB to 1 MiB, to show the fixed cost per operation (slide 5)
+- `e2-rails1`, `e2-rails2`, `e2-rails4` and the `e5-counters-*` windows — the RDMA path with 1, 2 and 4 rails, plus sustained runs whose only purpose is to read the NIC, NVLink and PCIe counters (slide 8)
+- `e4-qps1-r*`, `e4-qps2-r*`, `e4-qps4-r*` — the one controlled optimization, `NCCL_IB_QPS_PER_CONNECTION`, five repeats per setting (slide 9)
+- `e5-buffsize*`, `e5-gdr-off`, `e5-algo-*`, `e5-sock-nthreads4` — the other knobs (slide 10)
+
+**To prove out performance and scaling of a real workload** (slides 6, 7, 10):
+- `e3-g1`, `e3-g2`, `e3-g4` — DDP training of a 124M-parameter GPT on 1, 2 and 4 GPUs of one tray
+- `e3-g8-nvlink`, `e3-g8-rdma` — the same training on 8 GPUs across both trays, over NVLink and over the rails (slide 7)
+- `e5-ddp-bucket200` — the same 8-GPU RDMA run with 200 MiB gradient buckets instead of 25 (slide 10)
+
+Every cell takes about one minute (the training cells slightly more; the 15 optimization repeats about
+25 minutes together). All 41 are committed under `results/raw/`; in the live session I re-run a few and
+show the rest from the recorded results, which the commands below regenerate identically.
+
+The generic form for any cell, and what it does:
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only <id-or-glob> --image "$(cat .image-digest)"
+#   starts a watcher pod on each worker, applies deploy/k8s/rendered/<id>/manifests.yaml (one Indexed Job,
+#   one pod per tray, torchrun x 4 ranks), waits, collects result.json + ranks.csv + pod logs + counters into
+#   results/raw/<id>/, deletes the Job, settles 20 s. A cell whose result.json exists is skipped —
+#   `rm -rf results/raw/<id>` to force a re-run. `--only 'e4-qps1-*'` runs a group.
+kubectl -n compass logs -f job/compass-<id>        # in a second terminal: pre-check, PHASE and PERF lines as they happen
+python -m analysis results/raw && python -m slides   # tables, charts, SUMMARY.md and the deck from whatever has run
+```
+
 ### How the runbook maps onto the deck (`slides/compass.pptx`, 11 slides, speaker notes on each)
 
 | minutes | runbook section | slide(s) | what is on screen |
@@ -155,22 +188,66 @@ pod's address is a later entry. So every RDMA run discovers the index from the a
 link-local address until a router advertisement arrives. This is a small example of the brief's
 "separate evidence from diagnosis": we read the table instead of assuming.
 
-## 3. Baseline, scaling and diagnosis — run three cells live (about 4 minutes) — slides 4 to 8
+## 3. Baseline, scaling and diagnosis — the experiments behind slides 4 to 8
+
+Each block below is the exact command that produced the slide's numbers, with the measured wall
+time per cell. In the live session run the three counter windows (they are the ones the dashboard
+shows best); everything else is already in `results/raw/` and the slides are built from it.
+
+**Slide 4 — baseline, the size sweep over three transports** (about 1 min per cell)
 
 ```bash
-rm -rf results/raw/e5-counters-nvlink results/raw/e5-counters-rdma results/raw/e5-counters-rails1   # only if you want them re-run rather than skipped
-COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-counters-nvlink --image "$(cat .image-digest)"   # ~50 s
-COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-counters-rdma   --image "$(cat .image-digest)"   # ~55 s
-COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-counters-rails1 --image "$(cat .image-digest)"   # ~60 s
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-nvlink  --image "$(cat .image-digest)"   # MNNVL on, no rails
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-rdma    --image "$(cat .image-digest)"   # MNNVL off, 4 rails, GPUDirect
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-tcp     --image "$(cat .image-digest)"   # NCCL_IB_DISABLE=1 over the pod overlay
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-tcprail --image "$(cat .image-digest)"   # NCCL_IB_DISABLE=1 over one rail's child
+grep -h '^PERF' results/raw/e1-rdma/pod-0.log | head -3                                                   # one line per size: busbw, spread, slowest rank
+grep -h '^TRANSPORT' results/raw/e1-rdma/pod-0.log                                                        # the proof: 640 NET/IB GDRDMA channels, 0 NET/Socket
 ```
 
-Each command starts one Job (one pod per tray, four GPU ranks each), a small watcher pod on each
-tray, waits for the Job, collects the result, and cleans up. While a cell runs, in a second terminal
-`kubectl -n compass logs -f job/compass-e5-counters-rdma` shows the pre-check (which rails the pod
-got, their addresses appearing, the address table with `<-- chosen`), then a `PHASE` line when the
-timed loop starts and a `PERF` line with the bandwidth. Switch to the dashboard between cells: during
-the NVLink cell the rails are idle and the NVLink panels move; during the RDMA cell each of the four
-rails carries about 480 Gb/s; in the rails1 cell one rail carries about 410 Gb/s and the others nothing.
+**Slide 5 — the latency floor** (about 45 s per cell; 4 KiB → 1 MiB, 200 iterations per size)
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-nvlink-small --image "$(cat .image-digest)"
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e1-rdma-small   --image "$(cat .image-digest)"
+```
+
+**Slide 6 — the training workload** is a diagram, nothing to run; the application is `bench/ddp_train.py`.
+
+**Slide 7 — scaling the training workload** (about 1 min per cell; 10 warm-up + 50 timed steps + a profiler window)
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e3-g[124]'  --image "$(cat .image-digest)"   # 1, 2, 4 GPUs on one tray
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e3-g8-*'    --image "$(cat .image-digest)"   # 8 GPUs over NVLink, then over the rails
+grep -h '^PERF' results/raw/e3-g8-*/pod-0.log                                                            # samples/s, step time, comm fraction
+```
+
+**Slide 8 — diagnosis: rails and counters** (about 1 min per cell)
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e2-*'          --image "$(cat .image-digest)"   # 1, 2, 4 rails at 16 MiB / 512 MiB / 4 GiB
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e5-counters-*' --image "$(cat .image-digest)"   # ~10 s sustained 4 GiB all-reduce per cell, for the counters
+cat results/raw/e5-counters-rails1/counters.per-phase.csv | grep timed | grep port_xmit_data                  # bytes per second on each rail during the window
+```
+
+The host-side facts on slide 8 come from these read-only commands on a worker (they are quoted in the
+notes; run them once so you have seen them):
+
+```bash
+ssh GPU-3UWOQ-6G3YA-1 'cat /sys/class/infiniband/rdma_vf_rail0/ports/1/rate'                     # "200 Gb/sec (2X NDR)" — one plane
+ssh GPU-3UWOQ-6G3YA-1 'ls /sys/class/net | grep -E "^rdma_p[0-3]_rail0$"'                         # the four physical planes behind rail 0
+ssh GPU-3UWOQ-6G3YA-1 'x=$(cat /sys/class/infiniband/rdma_vf_rail0/ports/1/counters/port_xmit_data); echo $((x*4)); ethtool -S rdma_vf_rail0 | grep tx_vport_rdma_unicast_bytes'   # sysfs x4 == ethtool bytes
+ssh GPU-3UWOQ-6G3YA-1 'sudo lspci -vv -s 0000:03:00.0 | grep LnkSta; nvidia-smi --query-gpu=pcie.link.gen.current,pcie.link.width.current --format=csv,noheader'   # Gen6 x16 on NIC and GPU
+ssh GPU-3UWOQ-6G3YA-1 'nvidia-smi topo -m | head -6'                                              # GPU–NIC relation: NODE (through the Grace socket)
+```
+
+If you run only three cells live, make them `e5-counters-nvlink`, `e5-counters-rdma` and
+`e5-counters-rails1` (`rm -rf results/raw/e5-counters-*` first if they should really re-run): while each
+runs, `kubectl -n compass logs -f job/compass-<id>` shows the pre-check (which rails the pod got, their
+addresses appearing, the address table with `<-- chosen`), then a `PHASE` line when the timed loop starts
+and a `PERF` line with the bandwidth. Switch to the dashboard between cells: rails idle during the NVLink
+cell, about 480 Gb/s on each of the four rails during the RDMA cell, one rail at about 410 Gb/s in the
+rails1 cell.
 
 ### What to say, tied to the recorded results
 
@@ -214,6 +291,33 @@ the next experiment named. The 1-to-4-GPU drop on one tray involves no NIC at al
 size and launch overhead, and saying so is the point.
 
 ## 4. The optimization — Baseline → Hypothesis → Change → Measurement → Conclusion (brief item 4) — slide 9
+
+**Commands (slide 9)** — 15 cells, about 1 min each; the three settings are three matrix entries that
+differ only in `NCCL_IB_QPS_PER_CONNECTION` (and `NCCL_IB_SPLIT_DATA_ON_QPS=1` for 2 and 4), each with
+`repeats: 5`, which the renderer expands to `-r0 … -r4`:
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e4-qps1-*' --image "$(cat .image-digest)"   # baseline, 5 repeats
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e4-qps2-*' --image "$(cat .image-digest)"
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e4-qps4-*' --image "$(cat .image-digest)"
+python -m analysis results/raw && cat results/tables/e4_before_after.csv                                  # mean, std, delta %, Welch p per size and setting
+grep -A2 'e4-qps' deploy/k8s/matrix.yaml | head -12                                                        # show that only the one variable changes
+```
+
+Live, run one repeat of the baseline and one of QPs=4 (`--only e4-qps1-r0`, `--only e4-qps4-r0`, about
+2 minutes) and compare their `PERF` lines at 4 GiB; the five-repeat statistics come from the recorded
+runs.
+
+**Commands (slide 10)** — the other knobs, about 1 min each:
+
+```bash
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e5-buffsize*'    --image "$(cat .image-digest)"   # NCCL_BUFFSIZE 4 / 16 MiB
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-gdr-off        --image "$(cat .image-digest)"   # NCCL_NET_GDR_LEVEL=0
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only 'e5-algo-*'       --image "$(cat .image-digest)"   # Ring / Tree / NVLS on NVLink (Tree fails: invalid for the all-gather)
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-sock-nthreads4 --image "$(cat .image-digest)"   # TCP with more socket threads
+COMPASS_ALLOW_NIC_CLAIMS=1 deploy/k8s/run_matrix.sh --only e5-ddp-bucket200  --image "$(cat .image-digest)"   # the DDP bucket change, twin of e3-g8-rdma
+cat results/tables/e5_sensitivity.csv results/tables/e5_ddp_bucket.csv
+```
 
 Recorded in `results/tables/e4_before_after.csv`; the chart is on the slide. Baseline: one queue pair
 per NCCL connection (NCCL's default) on the RDMA path, four rails, GPUDirect on. Hypothesis, written

@@ -4,11 +4,11 @@ IMEX channels: channel0
 RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
 interfaces   :
   lo               UNKNOWN        127.0.0.1/8 ::1/128 
-  eth0@if253       UP             10.42.1.27/32 fe80::541a:20ff:fe15:40c6/64 
-W0930 07:18:33.318000 1 torch/distributed/run.py:766] 
-W0930 07:18:33.318000 1 torch/distributed/run.py:766] *****************************************
-W0930 07:18:33.318000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
-W0930 07:18:33.318000 1 torch/distributed/run.py:766] *****************************************
+  eth0@if327       UP             10.42.1.32/32 fe80::601a:61ff:fe3c:3b69/64 
+W0930 16:22:38.972000 1 torch/distributed/run.py:766] 
+W0930 16:22:38.972000 1 torch/distributed/run.py:766] *****************************************
+W0930 16:22:38.972000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 16:22:38.972000 1 torch/distributed/run.py:766] *****************************************
 /usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
   warnings.warn(  # warn only once
 /usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
@@ -17,7 +17,7 @@ W0930 07:18:33.318000 1 torch/distributed/run.py:766] **************************
   warnings.warn(  # warn only once
 /usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
   warnings.warn(  # warn only once
-RANK4 host=gpu-3uwoq-6g3ya-1 local_rank=0 done
-RANK5 host=gpu-3uwoq-6g3ya-1 local_rank=1 done
-RANK7 host=gpu-3uwoq-6g3ya-1 local_rank=3 done
+RANK4 host=gpu-3uwoq-6g3ya-1 local_rank=0 doneRANK5 host=gpu-3uwoq-6g3ya-1 local_rank=1 done
+
 RANK6 host=gpu-3uwoq-6g3ya-1 local_rank=2 done
+RANK7 host=gpu-3uwoq-6g3ya-1 local_rank=3 done

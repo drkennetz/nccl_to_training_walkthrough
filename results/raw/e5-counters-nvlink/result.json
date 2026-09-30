@@ -41,41 +41,41 @@
   "phases": [
     {
       "name": "warmup-4GiB",
-      "t_end": 1790752739.437519,
-      "t_start": 1790752739.287664
+      "t_end": 1790785384.8348567,
+      "t_start": 1790785384.6603365
     },
     {
       "name": "timed-4GiB",
-      "t_end": 1790752744.856474,
-      "t_start": 1790752739.438261
+      "t_end": 1790785390.2540565,
+      "t_start": 1790785384.8356206
     }
   ],
   "run_id": "e5-counters-nvlink",
   "schema_version": "1.0",
   "sweep": [
     {
-      "algbw_GBs": 475.758,
-      "busbw_GBs": 832.576,
+      "algbw_GBs": 475.74,
+      "busbw_GBs": 832.544,
       "bytes": 4294967296,
       "correct": true,
       "iters": 600,
-      "max_s": 0.009189279556274414,
-      "mean_s": 0.009027631674806276,
-      "min_s": 0.00896992015838623,
-      "p50_s": 0.009023167610168458,
+      "max_s": 0.009295231819152832,
+      "mean_s": 0.009027981192469597,
+      "min_s": 0.008969728469848632,
+      "p50_s": 0.00902291202545166,
       "rank_variance": {
-        "rank_mean_max_s": 0.00902788561820984,
-        "rank_mean_min_s": 0.009027345077196757,
-        "rank_mean_p50_s": 0.009027711731592815,
-        "slowest_rank": 1,
-        "spread_pct": 0.0059875750262595355
+        "rank_mean_max_s": 0.009028259472846986,
+        "rank_mean_min_s": 0.009027700338363647,
+        "rank_mean_p50_s": 0.009027985767523446,
+        "slowest_rank": 5,
+        "spread_pct": 0.006193346973914338
       },
       "warmup": 10
     }
   ],
   "timestamps": {
-    "end": "2026-09-30T07:19:08Z",
-    "start": "2026-09-30T07:19:07Z"
+    "end": "2026-09-30T16:23:13Z",
+    "start": "2026-09-30T16:23:12Z"
   },
   "topology": {
     "cpu_affinity": "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]",
@@ -104,7 +104,7 @@
       }
     },
     "nvidia_smi_topo": "\u001b[4mGPU0\tGPU1\tGPU2\tGPU3\tNIC0\tNIC1\tNIC2\tNIC3\tNIC4\tNIC5\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001b[0m\nGPU0\t X \tNV18\tNV18\tNV18\tNODE\tSYS\tNODE\tNODE\tSYS\tSYS\t0-71\t0\t\tN/A\nGPU1\tNV18\t X \tNV18\tNV18\tNODE\tSYS\tNODE\tNODE\tSYS\tSYS\t0-71\t0\t\tN/A\nGPU2\tNV18\tNV18\t X \tNV18\tSYS\tNODE\tSYS\tSYS\tNODE\tNODE\t72-143\t1\t\tN/A\nGPU3\tNV18\tNV18\tNV18\t X \tSYS\tNODE\tSYS\tSYS\tNODE\tNODE\t72-143\t1\t\tN/A\nNIC0\tNODE\tNODE\tSYS\tSYS\t X \tSYS\tNODE\tNODE\tSYS\tSYS\t\t\t\t\nNIC1\tSYS\tSYS\tNODE\tNODE\tSYS\t X \tSYS\tSYS\tNODE\tNODE\t\t\t\t\nNIC2\tNODE\tNODE\tSYS\tSYS\tNODE\tSYS\t X \tNODE\tSYS\tSYS\t\t\t\t\nNIC3\tNODE\tNODE\tSYS\tSYS\tNODE\tSYS\tNODE\t X \tSYS\tSYS\t\t\t\t\nNIC4\tSYS\tSYS\tNODE\tNODE\tSYS\tNODE\tSYS\tSYS\t X \tNODE\t\t\t\t\nNIC5\tSYS\tSYS\tNODE\tNODE\tSYS\tNODE\tSYS\tSYS\tNODE\t X \t\t\t\t\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nNIC Legend:\n\n  NIC0: mlx5_8\n  NIC1: mlx5_17\n  NIC2: rdma_vf_rail0\n  NIC3: rdma_vf_rail1\n  NIC4: rdma_vf_rail2\n  NIC5: rdma_vf_rail3",
-    "pod_interfaces": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \neth0@if251       UP             10.42.2.127/32 fe80::5066:61ff:febc:29e/64",
+    "pod_interfaces": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \neth0@if76        UP             10.42.3.253/32 fe80::b4a8:a7ff:fefb:7c5e/64",
     "ranks_per_host": {
       "gpu-3uwoq-6g3ya-1": 4,
       "gpu-3uwoq-6g3ya-2": 4
