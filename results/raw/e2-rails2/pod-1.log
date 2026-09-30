@@ -1,0 +1,39 @@
+=== e2-rails2 node_rank=1 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  rdma_vf_rail0@if28 UNKNOWN        fe80::285:fb00:168:5c10/64 
+  rdma_vf_rail1@if29 UNKNOWN        fe80::2fe:e000:185:5144/64 
+  eth0@if125       UP             10.42.2.62/32 fe80::ec6b:5eff:fec0:a337/64 
+  rdma_vf_rail0@if28 UNKNOWN        fdcd:8300:a1af:70ee:285:fb00:168:5c10/64 
+  rdma_vf_rail1@if29 UNKNOWN        fdcd:8300:a2af:70ee:2fe:e000:185:5144/64 
+rdma_vf_rail0:
+  [4] fe80:0000:0000:0000:0285:fb00:0168:5c10  IB/RoCE v1   rdma_vf_rail0        link-local
+  [5] fe80:0000:0000:0000:0285:fb00:0168:5c10  RoCE v2      rdma_vf_rail0        link-local
+  [6] fdcd:8300:a1af:70ee:0285:fb00:0168:5c10  IB/RoCE v1   rdma_vf_rail0        global
+  [7] fdcd:8300:a1af:70ee:0285:fb00:0168:5c10  RoCE v2      rdma_vf_rail0        global <-- chosen
+rdma_vf_rail1:
+  [4] fe80:0000:0000:0000:02fe:e000:0185:5144  IB/RoCE v1   rdma_vf_rail1        link-local
+  [5] fe80:0000:0000:0000:02fe:e000:0185:5144  RoCE v2      rdma_vf_rail1        link-local
+  [6] fdcd:8300:a2af:70ee:02fe:e000:0185:5144  IB/RoCE v1   rdma_vf_rail1        global
+  [7] fdcd:8300:a2af:70ee:02fe:e000:0185:5144  RoCE v2      rdma_vf_rail1        global <-- chosen
+NCCL_IB_GID_INDEX=7  consistent=True
+NCCL_IB_HCA==rdma_vf_rail0,rdma_vf_rail1 NCCL_IB_GID_INDEX=7
+W0930 06:22:43.055000 1 torch/distributed/run.py:766] 
+W0930 06:22:43.055000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:22:43.055000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:22:43.055000 1 torch/distributed/run.py:766] *****************************************
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+RANK5 host=gpu-3uwoq-6g3ya-2 local_rank=1 done
+RANK4 host=gpu-3uwoq-6g3ya-2 local_rank=0 done
+RANK7 host=gpu-3uwoq-6g3ya-2 local_rank=3 done
+RANK6 host=gpu-3uwoq-6g3ya-2 local_rank=2 done

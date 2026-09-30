@@ -1,0 +1,58 @@
+=== e2-rails2 node_rank=0 on gpu-3uwoq-6g3ya-1 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  rdma_vf_rail1@if29 UNKNOWN        fe80::205:9d00:123:eae0/64 
+  rdma_vf_rail0@if28 UNKNOWN        fe80::2f1:b200:195:d2ec/64 
+  eth0@if125       UP             10.42.1.97/32 fe80::3c99:c5ff:fe50:6d08/64 
+  rdma_vf_rail1@if29 UNKNOWN        fdcd:8300:a2af:70ed:205:9d00:123:eae0/64 
+  rdma_vf_rail0@if28 UNKNOWN        fdcd:8300:a1af:70ed:2f1:b200:195:d2ec/64 
+rdma_vf_rail0:
+  [4] fe80:0000:0000:0000:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        link-local
+  [5] fe80:0000:0000:0000:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        link-local
+  [6] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        global
+  [7] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        global <-- chosen
+rdma_vf_rail1:
+  [4] fe80:0000:0000:0000:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        link-local
+  [5] fe80:0000:0000:0000:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        link-local
+  [6] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        global
+  [7] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        global <-- chosen
+NCCL_IB_GID_INDEX=7  consistent=True
+NCCL_IB_HCA==rdma_vf_rail0,rdma_vf_rail1 NCCL_IB_GID_INDEX=7
+W0930 06:22:43.576000 1 torch/distributed/run.py:766] 
+W0930 06:22:43.576000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:22:43.576000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:22:43.576000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-16MiB", "event": "start", "t": 1790749389.8527882}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-16MiB", "event": "end", "t": 1790749390.5997214}
+PHASE {"name": "timed-16MiB", "event": "start", "t": 1790749390.5999105}
+PHASE {"name": "timed-16MiB", "event": "end", "t": 1790749390.6360888}
+PERF {"bytes": 16777216, "size": "16MiB", "iters": 100, "mean_s": 0.000359, "algbw_GBs": 46.776, "busbw_GBs": 81.859, "spread_pct": 0.28, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-512MiB", "event": "start", "t": 1790749392.9296205}
+PHASE {"name": "warmup-512MiB", "event": "end", "t": 1790749392.9721735}
+PHASE {"name": "timed-512MiB", "event": "start", "t": 1790749392.9724414}
+PHASE {"name": "timed-512MiB", "event": "end", "t": 1790749393.0619817}
+PERF {"bytes": 536870912, "size": "512MiB", "iters": 20, "mean_s": 0.004475, "algbw_GBs": 119.958, "busbw_GBs": 209.926, "spread_pct": 0.16, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790749393.06611}
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790749393.1905937}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790749393.1906717}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790749393.3725653}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.036365, "algbw_GBs": 118.106, "busbw_GBs": 206.685, "spread_pct": 0.05, "slowest_rank": 1, "correct": true}
+RANK2 host=gpu-3uwoq-6g3ya-1 local_rank=2 done
+RANK0 host=gpu-3uwoq-6g3ya-1 local_rank=0 done
+RANK3 host=gpu-3uwoq-6g3ya-1 local_rank=3 done
+RANK1 host=gpu-3uwoq-6g3ya-1 local_rank=1 done
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 384, "net_ib_gdr_channels": 384, "net_socket_channels": 0, "p2p_channels": 448, "shm_channels": 0, "ranks_reporting": 8, "path": "rdma_gdr", "network": "IBext_v10", "mnnvl": "0"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e2-rails2/result.json
