@@ -56,6 +56,26 @@ sections:
     we re-ran the sweep at small sizes, 4 KiB to 1 MiB, on the two fast paths. The number we get here — tens of microseconds per collective regardless of size — is what the training slide and the bucket-size
     result are built on.'
   - 'This slide exists to make the diagnosis honest: below a few MiB the network bandwidth is irrelevant; what matters is how many operations you issue. It sets up the bucket-size finding.'
+- title: '2 · The training workload: what one DDP step does, and why it needs the network'
+  image: slides/training.png
+  bullets:
+  - Eight processes (one per GPU, four per tray) each hold a full copy of a 124M-parameter GPT and train on their own batch of synthetic tokens
+  - 'Every step: forward, loss, backward on local data; then the gradients of all eight copies are averaged with an all-reduce, so the optimizer applies the same update everywhere and the copies stay identical'
+  - DDP does this in buckets (about 19 of 25 MiB per step) and starts each bucket's all-reduce while the backward pass is still running on earlier layers
+  - Inside a tray the all-reduce rides NVLink; between the trays it rides whatever the experiment selects — multi-node NVLink, the RDMA rails, or TCP — which is why this workload measures the transport
+  notes:
+  - 'Bridge from the latency floor: we have just seen that a collective has a fixed cost of tens of microseconds regardless of size. Now we introduce the workload that issues about nineteen of them every
+    step, because the brief asks for a representative workload at two scales and DDP training is what most GPU clusters actually run. Pause here for a moment; the next slide is its results.'
+  - 'How it works, in plain terms: data parallelism means every GPU has the whole model and a different slice of the data. After each GPU computes gradients on its slice, the gradients are averaged across
+    all GPUs (that is the all-reduce) and every GPU applies the same averaged update. Because everyone applies the same update to the same starting weights, the copies remain identical without ever copying
+    weights around.'
+  - 'What DDP adds: it does not wait for the whole backward pass to finish. It groups gradients into buckets (25 MiB by default) in reverse layer order and launches the all-reduce for a bucket as soon as
+    that bucket is complete, so communication overlaps with the rest of the backward computation. Bigger buckets mean fewer, larger collectives; smaller buckets mean more overlap but more fixed cost. This
+    is the knob the E5 slide turns.'
+  - 'Why it uses the network: the eight GPUs are in two trays. Within a tray the gradient averaging travels over NVLink; between trays it must cross either multi-node NVLink (through the IMEX channel),
+    the RDMA rails, or TCP. The training code does not choose; the cell''s NCCL environment does. That is what makes this workload a fair probe of the transport: same code, same data volume, different wire.'
+  - 'Where to find it: bench/ddp_train.py is the whole application (about 260 lines); docs/code-flow.md walks it step by step. What we record per run: step time on every rank from CUDA events, the NCCL
+    kernel share of a step from the profiler, and NCCL''s own connection log to prove which transport carried the gradients.'
 - title: '2 · Scaling: the training workload from 1 to 8 GPUs'
   chart: scaling_efficiency
   bullets:
@@ -64,9 +84,8 @@ sections:
   - The 'comm' figure is how much of each step the GPU spends in communication kernels (from the PyTorch profiler); at this model size the gradient exchange is a large share of every step
   table: e3_scaling
   notes:
-  - 'Bridge from the small-message floor: a fixed cost per collective means a workload''s speed depends on how many collectives it issues per step as well as on how many bytes it moves. The brief asks for
-    a representative workload at two scales; DDP training is that workload, and at the default bucket size it issues about 19 all-reduces per step — exactly the regime where both the fixed cost and the
-    wire matter, so it is a fair test of what the baseline curve predicts.'
+  - 'Bridge from the workload slide: we now know what one DDP step does and that it issues about nineteen all-reduces of 25 MiB each — right at the knee of the size curve from the baseline. Here is what
+    happened when that step ran at 1, 2, 4 and 8 GPUs, and over the two transports.'
   - 'Lead with the bucket size. DDP does not all-reduce each gradient separately: it packs gradients into buckets and launches one all-reduce per bucket as the backward pass fills them. The bucket cap here
     is PyTorch''s default, 25 MiB. The model has 124M parameters kept in fp32 under autocast, so about 474 MiB of gradients per step, which is roughly 19 all-reduces of 25 MiB each.'
   - 'Why that size makes the measurement useful: 25 MiB sits at the knee of the message-size curve from the baseline slide. At that size an all-reduce is already bandwidth-sensitive (NVLink and RDMA are

@@ -299,5 +299,124 @@ def build(out: str) -> str:
     return out
 
 
+def build_training(out: str) -> str:
+    """One DDP training step as the eight ranks see it: identical model copies, local forward and
+    backward on local data, gradient buckets all-reduced over NCCL, identical optimizer step."""
+    fig, ax = plt.subplots(figsize=(16, 9))
+    ax.set_xlim(0, 32)
+    ax.set_ylim(4.6, 18)
+    ax.axis("off")
+    fig.patch.set_facecolor("white")
+    ax.text(
+        0.4,
+        17.4,
+        "The training workload: one DDP step, eight identical model copies, one all-reduce per gradient bucket",
+        fontsize=14.5,
+        fontweight="bold",
+        color=TEXT,
+        va="center",
+    )
+    ax.text(
+        0.4,
+        16.7,
+        "torchrun starts 4 ranks per tray (one per GPU); every rank holds the full 124M-parameter GPT and trains on its own batch of synthetic tokens",
+        fontsize=9.5,
+        color=MUTED,
+        va="center",
+    )
+
+    # two trays with 4 rank columns each
+    def rank_column(x, y, label, color):
+        box(ax, x, y + 6.6, 2.6, 0.75, label, color=color, fs=8.5, bold=True)
+        steps = [
+            ("1  batch in\n8 × 1024 tokens", MUTED),
+            ("2  forward\nloss", BLUE),
+            ("3  backward\ngradients (fp32)", BLUE),
+            ("4  DDP reducer\n19 buckets × 25 MiB", VIOLET),
+            ("6  optimizer step\n(AdamW, identical)", GREEN),
+        ]
+        ys = [y + 5.5, y + 4.4, y + 3.3, y + 2.2, y + 0.3]
+        for (t, c), yy in zip(steps, ys, strict=True):
+            box(ax, x, yy, 2.6, 0.95, t, color=c, fs=7)
+        for a, b in zip(ys[:-1], ys[1:], strict=True):
+            if b == ys[-1]:
+                continue
+            arrow(ax, (x + 1.3, a), (x + 1.3, b + 0.95), color=MUTED, lw=1)
+        return x + 1.3, y + 2.2, y + 0.3 + 0.95
+
+    def tray_block(x0, y0, name):
+        box(ax, x0 - 0.3, y0 - 0.2, 4 * 2.9 + 0.4, 8.0, color=MUTED, lw=1.5)
+        ax.text(x0 - 0.1, y0 + 7.55, name, fontsize=10, fontweight="bold", color=TEXT, va="center")
+        cols = []
+        for i in range(4):
+            cols.append(
+                rank_column(x0 + i * 2.9, y0, f"rank {i if 'tray 1' in name else i + 4} · GPU {i}", BLUE)
+            )
+        return cols
+
+    y0 = 6.2
+    c1 = tray_block(0.8, y0, "worker tray 1")
+    c2 = tray_block(19.4, y0, "worker tray 2")
+
+    # the all-reduce band across everything, between step 4 and step 6
+    band_y = y0 + 1.3
+    box(ax, 0.5, band_y - 0.05, 31.0, 0.85, "", color=ORANGE, lw=1.8)
+    ax.text(
+        16.0,
+        band_y + 0.38,
+        "5   all-reduce of each bucket over NCCL — every rank ends with the SAME averaged gradients\n"
+        "inside a tray: NVLink   ·   between trays: multi-node NVLink, the RDMA rails, or TCP — the transport under test",
+        ha="center",
+        va="center",
+        fontsize=7.6,
+        color=TEXT,
+        fontweight="bold",
+        linespacing=1.3,
+    )
+    for cx, top, bottom in c1 + c2:
+        arrow(ax, (cx, top), (cx, band_y + 0.8), color=ORANGE, lw=1.2)
+        arrow(ax, (cx, band_y - 0.05), (cx, bottom), color=ORANGE, lw=1.2)
+
+    # side note in the gap between the trays
+    ax.text(
+        13.0,
+        y0 + 7.75,
+        "why the network is needed\n\n"
+        "each rank saw different data, so its\n"
+        "gradients differ; the optimizer must\n"
+        "apply the average of all eight, or the\n"
+        "copies drift apart. That average is the\n"
+        "all-reduce: 475 MiB per step, per rank.\n\n"
+        "DDP overlaps it with backward: a\n"
+        "bucket's all-reduce starts as soon as\n"
+        "that bucket is complete.\n\n"
+        "bigger buckets → fewer, larger\n"
+        "all-reduces (E5: 25 → 200 MiB)",
+        fontsize=7.4,
+        color=TEXT,
+        va="top",
+        ha="left",
+        linespacing=1.4,
+        bbox={"fc": SURFACE, "ec": GRID, "boxstyle": "round,pad=0.45"},
+    )
+    ax.text(
+        16.0,
+        y0 - 1.0,
+        "what we measure: step time per rank (CUDA events) → samples/s and scaling efficiency · NCCL kernel time per step (torch.profiler) → communication share · NCCL's log → which transport carried step 5",
+        ha="center",
+        fontsize=8,
+        color=MUTED,
+    )
+
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    fig.savefig(out, dpi=170, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
-    print(build(sys.argv[1] if len(sys.argv) > 1 else "slides/architecture.png"))
+    which = sys.argv[1] if len(sys.argv) > 1 else "all"
+    if which in ("all", "architecture"):
+        print(build("slides/architecture.png"))
+    if which in ("all", "training"):
+        print(build_training("slides/training.png"))

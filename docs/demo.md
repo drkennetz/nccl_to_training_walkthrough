@@ -6,18 +6,23 @@ before/after evidence (Baseline → Hypothesis → Change → Measurement → Co
 extends to multi-node production. This runbook is organised in that order. Every number quoted is in
 `results/SUMMARY.md` and comes from a committed `result.json`.
 
-### How the runbook maps onto the deck (`slides/compass.pptx`, 10 slides, speaker notes on each)
+### How the runbook maps onto the deck (`slides/compass.pptx`, 11 slides, speaker notes on each)
 
 | minutes | runbook section | slide(s) | what is on screen |
 |---|---|---|---|
 | 0–2 | opening | 1 (title) | the deck |
 | 2–9 | §1 architecture, while the cluster comes up | 2 (architecture diagram), 3 (DRA, dranet, Cilium) | deck + a terminal running the bring-up |
 | 9–11 | §2 the probe and the GID index | 3 (its last bullet) | terminal only: `scripts/demo-gid.sh` |
-| 11–17 | §3 baseline, small messages, scaling | 4, 5, 6 | deck; a terminal running the three live cells in the background |
-| 17–21 | §3 diagnosis | 7 | deck + the dashboard |
-| 21–25 | §4 the optimization and the other knobs | 8, 9 | deck |
-| 25–28 | §5 dashboard walkthrough | 7 again | the dashboard |
-| 28–30 | §6 production and close | 10 | deck |
+| 11–18 | §3 baseline, small messages, the training workload, scaling | 4, 5, 6 (pause: how DDP works), 7 | deck; a terminal running the three live cells in the background |
+| 18–22 | §3 diagnosis | 8 | deck + the dashboard |
+| 22–25 | §4 the optimization and the other knobs | 9, 10 | deck |
+| 25–28 | §5 dashboard walkthrough | 8 again | the dashboard |
+| 28–30 | §6 production and close | 11 | deck |
+
+Code pointers used below: the training application is **`bench/ddp_train.py`** (its `main()` is the whole
+flow); the all-reduce benchmark is **`bench/allreduce.py`**; the GID discovery is **`bench/gid.py`**; the
+counter watcher is **`bench/watcher.py`**. Each is walked step by step in
+[`docs/code-flow.md`](code-flow.md).
 
 Each slide's notes open with a "Bridge from …" paragraph that says how the previous experiment led to
 this one; read those bridges aloud when moving between slides, they are the narrative.
@@ -133,7 +138,9 @@ scripts/demo-gid.sh
 kubectl delete -f deploy/k8s/probe/probe-rails.yaml
 ```
 
-`demo-gid.sh` prints three things. First, the host's view of the rail's address table: two entries
+`demo-gid.sh` (which calls `bench/gid.py`; flow in
+[`docs/code-flow.md`](code-flow.md#the-gid-discovery--benchgidpy-see-also-docsgid-discoverymd)) prints three
+things. First, the host's view of the rail's address table: two entries
 per IP address (one per RoCE version), link-local at indexes 0 and 1, the rail's global address at 2
 and 3. Then the pod's view of the same NIC: the pod's own child interface has its own address, which
 lands at indexes 4 to 7, and the tool picks **index 7**, the RoCE v2 entry with a routable address. It
@@ -148,7 +155,7 @@ pod's address is a later entry. So every RDMA run discovers the index from the a
 link-local address until a router advertisement arrives. This is a small example of the brief's
 "separate evidence from diagnosis": we read the table instead of assuming.
 
-## 3. Baseline, scaling and diagnosis — run three cells live (about 4 minutes) — slides 4 to 7
+## 3. Baseline, scaling and diagnosis — run three cells live (about 4 minutes) — slides 4 to 8
 
 ```bash
 rm -rf results/raw/e5-counters-nvlink results/raw/e5-counters-rdma results/raw/e5-counters-rails1   # only if you want them re-run rather than skipped
@@ -167,19 +174,35 @@ rails carries about 480 Gb/s; in the rails1 cell one rail carries about 410 Gb/s
 
 ### What to say, tied to the recorded results
 
-**Baseline (brief item 2) — slide 4, then slide 5 for the small-message floor.** Same 8-GPU all-reduce over three paths, 1 MiB to 8 GiB. NVLink reaches
+**Baseline (brief item 2) — slide 4, then slide 5 for the small-message floor.** The code that produced
+these numbers is `bench/allreduce.py`; its flow (sizes → warm-up → CUDA-event-timed loop → correctness
+on a fresh tensor → per-rank gather → NCCL log parse → `result.json`) is in
+[`docs/code-flow.md`](code-flow.md#the-all-reduce-benchmark--benchallreducepy). If someone asks "how do
+you know it used NVLink", the answer is step 6 of that flow. Same 8-GPU all-reduce over three paths, 1 MiB to 8 GiB. NVLink reaches
 835 GB/s bus bandwidth; the four rails about 425 GB/s; TCP on one rail 118 GB/s; TCP on the pod
 overlay 4 GB/s. Below a few MiB every path costs about the same 20 to 80 microseconds — fixed costs,
 not data. Which path was used is not inferred from the speed: every result records NCCL's own
 connection log (256 NVLink channels, or 640 RDMA channels with GPUDirect, or socket channels).
 
-**Scaling (brief item 2) — slide 6.** Its notes lead with the DDP bucket size (25 MiB default, about 19
+**The training workload — slide 6, a deliberate pause.** Before the scaling numbers, the diagram of one
+DDP step: eight processes each hold the whole 124M-parameter model, compute gradients on their own
+batch, average them with an all-reduce (in about 19 buckets of 25 MiB), and apply the same optimizer
+step. Inside a tray the averaging travels over NVLink; between trays over whichever transport the
+experiment selects. The application is `bench/ddp_train.py` — `main()` there is the entire flow, about
+260 lines — and [`docs/code-flow.md`](code-flow.md#the-training-application--benchddp_trainpy) walks it
+step by step (where DDP is wrapped, where the step is timed, where the profiler measures the
+communication share, where the transport is proven).
+
+**Scaling (brief item 2) — slide 7.** Its notes lead with the DDP bucket size (25 MiB default, about 19
 all-reduces per step) and why that size lets the two comparisons separate wire speed from per-collective
 fixed cost. The training workload — a 124M-parameter GPT with PyTorch DDP — runs at 1,
 2, 4 GPUs on one tray and 8 across two. Efficiency 93 % at 2, 78 % at 4, 92 % at 8 over NVLink, 69 % at
 8 over the rails. The profiler shows communication taking most of the step at this model size.
 
-**Diagnosis (brief item 3), evidence first — slide 7.** Bandwidth on the RDMA path scales with the number of
+**Diagnosis (brief item 3), evidence first — slide 8.** The counters behind this slide come from
+`bench/watcher.py` (one sample per second per tray; flow in
+[`docs/code-flow.md`](code-flow.md#the-counter-watcher--benchwatcherpy)) joined to the benchmark's
+phase markers by `analysis/counters.py`. Bandwidth on the RDMA path scales with the number of
 rails: 96, 207, 364 GB/s at 1, 2, 4 rails. The bytes the NIC counted on the wire equal the theoretical
 minimum for a two-node all-reduce, and a single rail carried 411 Gb/s — impossible on a 200 Gb/s link,
 so a rail is really four 200 Gb/s planes, 800 Gb/s (the physical ports `rdma_p0..p3_rail0` are on the
@@ -190,7 +213,7 @@ congestion, not PCIe. The diagnosis, kept apart: the remaining suspect is the pe
 the next experiment named. The 1-to-4-GPU drop on one tray involves no NIC at all — that one is model
 size and launch overhead, and saying so is the point.
 
-## 4. The optimization — Baseline → Hypothesis → Change → Measurement → Conclusion (brief item 4) — slide 8
+## 4. The optimization — Baseline → Hypothesis → Change → Measurement → Conclusion (brief item 4) — slide 9
 
 Recorded in `results/tables/e4_before_after.csv`; the chart is on the slide. Baseline: one queue pair
 per NCCL connection (NCCL's default) on the RDMA path, four rails, GPUDirect on. Hypothesis, written
@@ -204,7 +227,7 @@ real but this knob cannot reach it — splitting each message across queue pairs
 request and multiplies completions; it helps on fabrics where a single flow cannot fill a link, which a
 two-tray rail path is not. Keep the default. A negative result, reported as one.
 
-Then slide 9, the knob that did help the workload: DDP gradient buckets 25 → 200 MiB over the rails gave
+Then slide 10, the knob that did help the workload: DDP gradient buckets 25 → 200 MiB over the rails gave
 2090 → 2769 samples/s (+32 %) and cut the communication share of a step from 91 % to 32 %. That is the
 small-message finding applied: fewer, larger exchanges. Other measured knobs, for questions:
 GPUDirect off −38 % (same bytes on the wire, 1.6× the time); NVLS vs Ring on NVLink 474 vs 388 GB/s;
@@ -213,9 +236,9 @@ on TCP, still far below RDMA. Two settings are deliberately fixed rather than tu
 discovered, and `NCCL_P2P_NET_CHUNKSIZE` is left unset on the RDMA path (an earlier record: with it set,
 queue pairs connected but no bytes moved).
 
-## 5. Dashboard walkthrough (about 4 minutes) — *Compass — NCCL fabric counters* — return to slide 7
+## 5. Dashboard walkthrough (about 4 minutes) — *Compass — NCCL fabric counters* — return to slide 8
 
-The dashboard is the live version of slide 7's evidence table: the same counters, on the same trays,
+The dashboard is the live version of slide 8's evidence table: the same counters, on the same trays,
 while the three cells from section 3 run.
 
 Panels top to bottom; the node variable on "All" shows both workers.
@@ -239,7 +262,7 @@ How the data gets there: a Terraform-managed Grafana Alloy collector in the clus
 exporters the site already runs on every tray (node, DCGM, RDMA, NVLink, PCIe) and ships to Grafana
 Cloud with a per-tenant push token that Terraform minted. Nothing was installed on the trays for this.
 
-## 6. Extending to production (brief item 5), and closing — slide 10
+## 6. Extending to production (brief item 5), and closing — slide 11
 
 The manifests scale by node count: one pod per tray, one GPU claim and one rail claim per pod. Inside
 an NVLink domain use NVLink; between domains budget for the rails and size the gradient buckets
