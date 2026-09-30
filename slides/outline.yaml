@@ -1,55 +1,79 @@
-# Slide outline. Numbers are never typed here: {table:<name>} and {chart:<name>} pull from
-# results/tables/*.csv and results/charts/*.png; {stat:<expr>} pulls a single cell.
-title: "Distributed communication on a GB300 pair: measure, diagnose, one change, proof"
-subtitle: "NCCL all-reduce · NVLink vs RDMA vs TCP · DDP scaling · NCCL_IB_QPS_PER_CONNECTION"
+title: 'Distributed communication on a GB300 pair: measure, diagnose, one change, proof'
+subtitle: NCCL all-reduce · NVLink vs RDMA vs TCP · DDP scaling · NCCL_IB_QPS_PER_CONNECTION
 sections:
-  - title: "1 · Architecture and design choices"
-    bullets:
-      - "Two GB300 trays (4 GPUs + 4 RDMA rail VFs each) leased from a shared Slurm pool; k3s + Cilium via the vendored bootstrap"
-      - "GPUs through the NVIDIA DRA driver (ResourceClaim, DeviceClass gpu.nvidia.com); NICs through a dranet fork: IPVLAN children of the rail VFs, RDMA reached in shared netns mode — nothing leaves the host, no hostNetwork anywhere"
-      - "One image (thin layer on NGC PyTorch), one Indexed Job per cell, torchrun 2×4 ranks, rendezvous via a headless Service"
-      - "Every run writes a schema-validated result.json + per-rank CSV; a 1 Hz watcher samples the RDMA, NIC and DCGM counters behind the numbers"
-      - "CI: ruff, pytest (no GPU), manifest drift check, Terraform validate, analysis smoke; arm64 image to ghcr.io (mirrored to Quay)"
-      - "Observability: host exporters (DCGM :9400, RDMA :9500, NVLink :9600, node :9100) shipped to Grafana Cloud by Terraform-managed Alloy; one fabric dashboard"
-  - title: "2 · Baseline: all-reduce vs message size, three transports"
-    chart: size_vs_busbw
-    bullets:
-      - "Bus bandwidth rises with message size until the pipeline is full: fixed per-collective latency dominates small messages, the wire dominates large ones"
-      - "Transport is proven from NCCL's own channel report (P2P/MNNVL · NET/IB/GDRDMA · NET/Socket), not inferred from speed"
-    table: e1_size_vs_transport
-  - title: "2 · Baseline: small messages are latency-bound"
-    chart: small_message_latency
-    table: e1_small_latency
-  - title: "2 · Scaling: the DDP workload at 1 → 8 GPUs"
-    chart: scaling_efficiency
-    table: e3_scaling
-    bullets:
-      - "Efficiency = throughput / (N × single-GPU throughput); the comm fraction is NCCL kernel time over step time from torch.profiler"
-  - title: "3 · Diagnosis: where accelerator time goes"
-    chart: rails_vs_busbw
-    bullets:
-      - "Evidence: bytes on the wire (port_xmit_data, verified against ethtool) equal the two-node minimum S per direction; one rail carried 411 Gb/s — so a rail is a 4-plane 800 Gb/s port, not the 200 Gb/s sysfs reports"
-      - "RDMA path scales with rails claimed (1 → 2 → 4) and each rail sits at ~55 % of 800 Gb/s; CNP/ECN/out-of-sequence counters flat; NIC and GPU at PCIe Gen6 x16 → not the wire, not congestion, not PCIe"
-      - "What remains: the per-rail injection path (one NCCL connection per GPU–NIC pair, GDR across the Grace socket over C2C) — a narrowed hypothesis, with the next experiment named (channels per NIC, GPU–NIC placement)"
-      - "Cross-tray NVLink at 835 GB/s is ~2× the four rails together: the topology decides the transport, the transport decides the ceiling"
-    table: e2_rails
-  - title: "4 · Optimization: NCCL_IB_QPS_PER_CONNECTION"
-    chart: before_after_box
-    bullets:
-      - "Baseline: 1 QP per connection on the RDMA path"
-      - "Hypothesis (written before the run): a single QP per peer leaves rail bandwidth idle (rails at ~55 %); more QPs spread the flow and raise busbw; trade-off is per-QP state and out-of-order handling (out_of_sequence, packet_seq_err)"
-      - "Change: QPS_PER_CONNECTION 1 → 2 → 4 with SPLIT_DATA_ON_QPS=1; 5 repeats each at 16 MiB / 512 MiB / 4 GiB; nothing else touched"
-      - "Measurement: QPs=2 −4/−9/−8 %, QPs=4 −19/−32/−29 % (Welch p < 0.001 at every size for QPs=4); counter window at QPs=4: 338 Gb/s per rail vs 482, reordering and congestion counters still zero"
-      - "Conclusion — negative: the headroom is real but this knob cannot reach it; splitting messages across QPs shrinks each work request. Keep the default; the ceiling is on the injection side"
-    table: e4_before_after
-  - title: "5 · Sensitivity appendix"
-    table: e5_sensitivity
-    bullets:
-      - "GPUDirect off (−38 %, same bytes on the wire, 1.6× the time), buffer sizes (noise), NVLS vs Ring on NVLink (474 vs 388 GB/s algbw), Tree invalid for the all-gather, socket threads (7× on TCP)"
-      - "DDP bucket 25 → 200 MiB over the rails: 2090 → 2769 samples/s (+32 %), comm fraction 91 % → 32 % — change how often you talk before how you talk"
-  - title: "5 · Extending to production multi-node GPU systems"
-    bullets:
-      - "Same manifests scale by nnodes: one pod per tray, one claim per pod; rails per pod and GID discovery stay per-node decisions"
-      - "Fleet health: the counters watched here (rail bytes, CNPs, pause, NVLink errors, transport fallbacks) become alert rules; a silent NET/Socket fallback is a FAIL, not a slow run"
-      - "Gang scheduling (Kueue) and topology labels (NVLink clique, fabric block) place jobs where the fast path exists"
-      - "Rack-scale: multi-node NVLink inside the clique, the rails between racks; floors are calibrated per width and message size"
+- title: 1 · Architecture and design choices
+  bullets:
+  - Two GB300 trays (4 GPUs + 4 RDMA rail VFs each) leased from a shared Slurm pool; k3s + Cilium via the vendored bootstrap
+  - 'GPUs through the NVIDIA DRA driver (ResourceClaim, DeviceClass gpu.nvidia.com); NICs through a dranet fork: IPVLAN children of the rail VFs, RDMA reached in shared netns mode — nothing leaves the host,
+    no hostNetwork anywhere'
+  - One image (thin layer on NGC PyTorch), one Indexed Job per cell, torchrun 2×4 ranks, rendezvous via a headless Service
+  - Every run writes a schema-validated result.json + per-rank CSV; a 1 Hz watcher samples the RDMA, NIC and DCGM counters behind the numbers
+  - 'CI: ruff, pytest (no GPU), manifest drift check, Terraform validate, analysis smoke; arm64 image to ghcr.io (mirrored to Quay)'
+  - 'Observability: host exporters (DCGM :9400, RDMA :9500, NVLink :9600, node :9100) shipped to Grafana Cloud by Terraform-managed Alloy; one fabric dashboard'
+- title: 1 · Why DRA, why dranet (the fork), why Cilium
+  bullets:
+  - 'DRA (GA in Kubernetes 1.34): GPUs and NICs are structured devices with attributes; a ResourceClaim per pod against a DeviceClass — one mechanism for both device kinds, visible to the scheduler'
+  - 'dranet upstream moves the NIC into the pod; on this site that drains the tray (host health check inventories the rails). The fork adds IPVLAN children: the VF stays on the host, the pod gets a child
+    with its own SLAAC address, RDMA reached in shared netns mode — no hostNetwork, no privilege, host inventory unchanged'
+  - Shared RDMA netns mode can only be set with no pod namespace alive → the bootstrap sets it on the fresh tray before k3s and restores it at teardown (do-no-harm on borrowed hardware)
+  - 'Cilium 1.20: eBPF kube-proxy replacement (no iptables churn on a host whose health check watches routes), geneve tunnel on the management NIC (site never learns pod CIDRs, no BGP, no LB IPs), Hubble
+    for flow evidence — and the data plane never touches it'
+- title: '1 · The RoCE GID index: discovered, not assumed'
+  bullets:
+  - 'GID table = two entries per IP address (RoCE v1, RoCE v2): link-local at 0/1, the VF''s global at 2/3 → index 3 on the host'
+  - In the pod the IPVLAN child's addresses land at 4–7 (namespace-scoped view) → index 7; a second pod on the same rail would be 11
+  - 'bench/gid.py: only HCAs whose uverbs char device is in the pod; RoCE v2 + global; every claimed rail must agree; exported as NCCL_IB_GID_INDEX by the pre-check after a router solicitation (a fresh
+    child has link-local only)'
+  - 'Wrong index = QP connect failures or a connected communicator moving zero bytes; ibv_rc_pingpong on index 7: 12–15 µs at 4 KiB, ~120 µs per 1 MiB round trip'
+- title: '2 · Baseline: all-reduce vs message size, three transports'
+  chart: size_vs_busbw
+  bullets:
+  - 'Bus bandwidth rises with message size until the pipeline is full: fixed per-collective latency dominates small messages, the wire dominates large ones'
+  - Transport is proven from NCCL's own channel report (P2P/MNNVL · NET/IB/GDRDMA · NET/Socket), not inferred from speed
+  table: e1_size_vs_transport
+- title: '2 · Baseline: small messages are latency-bound'
+  chart: small_message_latency
+  table: e1_small_latency
+- title: '2 · Scaling: the DDP workload at 1 → 8 GPUs'
+  chart: scaling_efficiency
+  table: e3_scaling
+  bullets:
+  - Efficiency = throughput / (N × single-GPU throughput); the comm fraction is NCCL kernel time over step time from torch.profiler
+- title: '3 · Diagnosis: where accelerator time goes'
+  chart: rails_vs_busbw
+  bullets:
+  - 'Evidence: bytes on the wire (port_xmit_data, verified against ethtool) equal the two-node minimum S per direction; one rail carried 411 Gb/s — so a rail is a 4-plane 800 Gb/s port, not the 200 Gb/s
+    sysfs reports'
+  - RDMA path scales with rails claimed (1 → 2 → 4) and each rail sits at ~55 % of 800 Gb/s; CNP/ECN/out-of-sequence counters flat; NIC and GPU at PCIe Gen6 x16 → not the wire, not congestion, not PCIe
+  - 'What remains: the per-rail injection path (one NCCL connection per GPU–NIC pair, GDR across the Grace socket over C2C) — a narrowed hypothesis, with the next experiment named (channels per NIC, GPU–NIC
+    placement)'
+  - 'Cross-tray NVLink at 835 GB/s is ~2× the four rails together: the topology decides the transport, the transport decides the ceiling'
+  table: e2_rails
+- title: '4 · Optimization: NCCL_IB_QPS_PER_CONNECTION'
+  chart: before_after_box
+  bullets:
+  - 'Baseline: 1 QP per connection on the RDMA path'
+  - 'Hypothesis (written before the run): a single QP per peer leaves rail bandwidth idle (rails at ~55 %); more QPs spread the flow and raise busbw; trade-off is per-QP state and out-of-order handling
+    (out_of_sequence, packet_seq_err)'
+  - 'Change: QPS_PER_CONNECTION 1 → 2 → 4 with SPLIT_DATA_ON_QPS=1; 5 repeats each at 16 MiB / 512 MiB / 4 GiB; nothing else touched'
+  - 'Measurement: QPs=2 −4/−9/−8 %, QPs=4 −19/−32/−29 % (Welch p < 0.001 at every size for QPs=4); counter window at QPs=4: 338 Gb/s per rail vs 482, reordering and congestion counters still zero'
+  - 'Conclusion — negative: the headroom is real but this knob cannot reach it; splitting messages across QPs shrinks each work request. Keep the default; the ceiling is on the injection side'
+  table: e4_before_after
+- title: 5 · Sensitivity appendix
+  table: e5_sensitivity
+  bullets:
+  - GPUDirect off (−38 %, same bytes on the wire, 1.6× the time), buffer sizes (noise), NVLS vs Ring on NVLink (474 vs 388 GB/s algbw), Tree invalid for the all-gather, socket threads (7× on TCP)
+  - 'DDP bucket 25 → 200 MiB over the rails: 2090 → 2769 samples/s (+32 %), comm fraction 91 % → 32 % — change how often you talk before how you talk'
+- title: 5 · Extending to production multi-node GPU systems
+  bullets:
+  - 'Same manifests scale by nnodes: one pod per tray, one claim per pod; rails per pod and GID discovery stay per-node decisions'
+  - 'Fleet health: the counters watched here (rail bytes, CNPs, pause, NVLink errors, transport fallbacks) become alert rules; a silent NET/Socket fallback is a FAIL, not a slow run'
+  - Gang scheduling (Kueue) and topology labels (NVLink clique, fabric block) place jobs where the fast path exists
+  - 'Rack-scale: multi-node NVLink inside the clique, the rails between racks; floors are calibrated per width and message size'
+- title: Live demo plan (docs/demo.md)
+  bullets:
+  - 'Bring-up (~7 min, talk over it): preflight 45 s → k8s-up ~4 min → GPU Operator in DRA mode ~1.5 min → dranet fork + DeviceClass ~1 min'
+  - 'Probe (~1 min warm): host GID table vs pod GID table, host still owns the VF, pingpong on the discovered GID'
+  - 'Three counter-window cells (~1 min each): NVLink, 4 rails, 1 rail — watched live on the fabric dashboard'
+  - 'Dashboard tour: NVLink bytes per GPU → rails at ~480 Gb/s each → flat CNP/ECN/out-of-sequence → TCP cells show up only on the management NIC and host CPU'
+  - 'Fallback: everything in results/ is committed and regenerable (make analyze); teardown k8s-down ~3 min, trays verified clean'
