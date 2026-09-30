@@ -1,0 +1,152 @@
+=== e5-algo-tree node_rank=0 on gpu-3uwoq-6g3ya-1 ===
+GPUs visible : 4
+IMEX channels: channel0 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if237       UP             10.42.1.69/32 fe80::184f:12ff:fe18:7e1b/64 
+W0930 07:10:59.935000 1 torch/distributed/run.py:766] 
+W0930 07:10:59.935000 1 torch/distributed/run.py:766] *****************************************
+W0930 07:10:59.935000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 07:10:59.935000 1 torch/distributed/run.py:766] *****************************************
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank1]:   File "<frozen runpy>", line 88, in _run_code
+[rank1]:   File "/opt/compass/bench/__main__.py", line 31, in <module>
+[rank1]:     sys.exit(main())
+[rank1]:              ^^^^^^
+[rank1]:   File "/opt/compass/bench/__main__.py", line 27, in main
+[rank1]:     return m(rest)
+[rank1]:            ^^^^^^^
+[rank1]:   File "/opt/compass/bench/allreduce.py", line 84, in main
+[rank1]:     dist.all_gather_object(everyone, me)
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank1]:     return func(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3131, in all_gather_object
+[rank1]:     all_gather(object_size_list, local_size, group=group)
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank1]:     return func(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3842, in all_gather
+[rank1]:     work = group.allgather([tensor_list], [tensor], opts)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]: torch.distributed.DistBackendError: NCCL error in: /opt/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:3615, invalid usage (run with NCCL_DEBUG=WARN for details), NCCL version 2.27.7
+[rank1]: ncclInvalidUsage: This usually reflects invalid usage of NCCL library.
+[rank1]: Last error:
+[rank1]: Error : no algorithm/protocol available for function AllGather with datatype ncclInt8. NCCL_ALGO was set to Tree.
+[rank2]: Traceback (most recent call last):
+[rank2]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank2]:   File "<frozen runpy>", line 88, in _run_code
+[rank2]:   File "/opt/compass/bench/__main__.py", line 31, in <module>
+[rank2]:     sys.exit(main())
+[rank2]:              ^^^^^^
+[rank2]:   File "/opt/compass/bench/__main__.py", line 27, in main
+[rank2]:     return m(rest)
+[rank2]:            ^^^^^^^
+[rank2]:   File "/opt/compass/bench/allreduce.py", line 84, in main
+[rank2]:     dist.all_gather_object(everyone, me)
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank2]:     return func(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3131, in all_gather_object
+[rank2]:     all_gather(object_size_list, local_size, group=group)
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank2]:     return func(*args, **kwargs)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank2]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3842, in all_gather
+[rank2]:     work = group.allgather([tensor_list], [tensor], opts)
+[rank2]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank2]: torch.distributed.DistBackendError: NCCL error in: /opt/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:3615, invalid usage (run with NCCL_DEBUG=WARN for details), NCCL version 2.27.7
+[rank2]: ncclInvalidUsage: This usually reflects invalid usage of NCCL library.
+[rank2]: Last error:
+[rank2]: Error : no algorithm/protocol available for function AllGather with datatype ncclInt8. NCCL_ALGO was set to Tree.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank0]:   File "<frozen runpy>", line 88, in _run_code
+[rank0]:   File "/opt/compass/bench/__main__.py", line 31, in <module>
+[rank0]:     sys.exit(main())
+[rank0]:              ^^^^^^
+[rank0]:   File "/opt/compass/bench/__main__.py", line 27, in main
+[rank0]:     return m(rest)
+[rank0]:            ^^^^^^^
+[rank0]:   File "/opt/compass/bench/allreduce.py", line 84, in main
+[rank0]:     dist.all_gather_object(everyone, me)
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3131, in all_gather_object
+[rank0]:     all_gather(object_size_list, local_size, group=group)
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3842, in all_gather
+[rank0]:     work = group.allgather([tensor_list], [tensor], opts)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]: torch.distributed.DistBackendError: NCCL error in: /opt/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:3615, invalid usage (run with NCCL_DEBUG=WARN for details), NCCL version 2.27.7
+[rank0]: ncclInvalidUsage: This usually reflects invalid usage of NCCL library.
+[rank0]: Last error:
+[rank0]: Error : no algorithm/protocol available for function AllGather with datatype ncclInt8. NCCL_ALGO was set to Tree.
+[rank3]: Traceback (most recent call last):
+[rank3]:   File "<frozen runpy>", line 198, in _run_module_as_main
+[rank3]:   File "<frozen runpy>", line 88, in _run_code
+[rank3]:   File "/opt/compass/bench/__main__.py", line 31, in <module>
+[rank3]:     sys.exit(main())
+[rank3]:              ^^^^^^
+[rank3]:   File "/opt/compass/bench/__main__.py", line 27, in main
+[rank3]:     return m(rest)
+[rank3]:            ^^^^^^^
+[rank3]:   File "/opt/compass/bench/allreduce.py", line 84, in main
+[rank3]:     dist.all_gather_object(everyone, me)
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank3]:     return func(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3131, in all_gather_object
+[rank3]:     all_gather(object_size_list, local_size, group=group)
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/c10d_logger.py", line 81, in wrapper
+[rank3]:     return func(*args, **kwargs)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank3]:   File "/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py", line 3842, in all_gather
+[rank3]:     work = group.allgather([tensor_list], [tensor], opts)
+[rank3]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank3]: torch.distributed.DistBackendError: NCCL error in: /opt/pytorch/pytorch/torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:3615, invalid usage (run with NCCL_DEBUG=WARN for details), NCCL version 2.27.7
+[rank3]: ncclInvalidUsage: This usually reflects invalid usage of NCCL library.
+[rank3]: Last error:
+[rank3]: Error : no algorithm/protocol available for function AllGather with datatype ncclInt8. NCCL_ALGO was set to Tree.
+[rank0]:[W930 07:11:25.266887521 ProcessGroupNCCL.cpp:1538] Warning: WARNING: destroy_process_group() was not called before program exit, which can leak resources. For more info, please see https://pytorch.org/docs/stable/distributed.html#shutdown (function operator())
+W0930 07:11:26.567000 1 torch/distributed/elastic/multiprocessing/api.py:900] Sending process 256 closing signal SIGTERM
+W0930 07:11:26.568000 1 torch/distributed/elastic/multiprocessing/api.py:900] Sending process 257 closing signal SIGTERM
+W0930 07:11:26.568000 1 torch/distributed/elastic/multiprocessing/api.py:900] Sending process 258 closing signal SIGTERM
+E0930 07:11:27.160000 1 torch/distributed/elastic/multiprocessing/api.py:874] failed (exitcode: 1) local_rank: 0 (pid: 255) of binary: /usr/bin/python
+Traceback (most recent call last):
+  File "/usr/local/bin/torchrun", line 7, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 357, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 892, in main
+    run(args)
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/run.py", line 883, in run
+    elastic_launch(
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 139, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/torch/distributed/launcher/api.py", line 270, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+bench FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2026-09-30_07:11:26
+  host      : compass-e5-algo-tree-0.compass-e5-algo-tree.compass.svc.cluster.local
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 255)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
