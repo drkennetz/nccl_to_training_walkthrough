@@ -59,11 +59,19 @@ for dir in "$HERE"/rendered/*/; do
   if (( DRY )); then log "DRY $run_id"; continue; fi
   log "run  $run_id"
   t0=$(date +%s)
+  # leftovers from an interrupted pass (a Job is immutable, so apply would fail)
+  kubectl -n "$NS" delete -f "$manifest" --ignore-not-found --wait=true --timeout=120s >/dev/null 2>&1 || true
   watchers_up
   if [[ -n "$IMAGE" ]]; then sed "s#^\(\s*image:\s*\).*#\1$IMAGE#" "$manifest"; else cat "$manifest"; fi | kubectl apply -f - >/dev/null
   job="compass-$run_id"
-  rc=0
-  kubectl -n "$NS" wait --for=condition=complete "job/$job" --timeout="${CELL_TIMEOUT:-1500}s" >/dev/null 2>&1 || rc=$?
+  # poll for Complete OR Failed: `kubectl wait --for=condition=complete` would sit through a failure
+  rc=1; deadline=$(( $(date +%s) + ${CELL_TIMEOUT:-1500} ))
+  while (( $(date +%s) < deadline )); do
+    st=$(kubectl -n "$NS" get job "$job" -o jsonpath='{range .status.conditions[*]}{.type}={.status} {end}' 2>/dev/null)
+    [[ "$st" == *"Complete=True"* ]] && { rc=0; break; }
+    [[ "$st" == *"Failed=True"* ]] && { rc=2; break; }
+    sleep 5
+  done
   if (( rc != 0 )); then
     if kubectl -n "$NS" get job "$job" -o jsonpath='{.status.conditions[?(@.type=="Failed")].status}' | grep -q True; then
       log "FAIL $run_id: job failed ($(kubectl -n "$NS" get job "$job" -o jsonpath='{.status.conditions[?(@.type=="Failed")].message}'))"

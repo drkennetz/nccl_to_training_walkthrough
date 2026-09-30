@@ -4,7 +4,7 @@
 FROM nvcr.io/nvidia/pytorch@sha256:ace9a848c0ae543317e3c4763b6b4248961c47902625abfe3c77a0fb931c50fb
 LABEL org.opencontainers.image.source="https://github.com/drkennetz/compass_takehome" \
       org.opencontainers.image.description="NCCL all-reduce sweep, DDP scaling workload, fabric counter watcher"
-RUN apt-get update && apt-get install -y --no-install-recommends ethtool iproute2 rdma-core ibverbs-utils \
+RUN apt-get update && apt-get install -y --no-install-recommends ethtool iproute2 rdma-core ibverbs-utils ndisc6 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /opt/compass
 COPY pyproject.toml README.md ./

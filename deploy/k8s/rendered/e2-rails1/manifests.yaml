@@ -159,9 +159,23 @@ spec:
               n=$(echo "$hcas" | tr ',' '\n' | grep -c .)
               [ "$n" -eq "${EXPECT_HCAS}" ] || { echo "PRECHECK-FAILED: ${n} usable rdma_vf_rail* device(s) (${hcas}), expected ${EXPECT_HCAS}"; exit 3; }
               export NCCL_IB_HCA="=${hcas}"
+              # The IPVLAN children autoconfigure from router advertisements; a fresh pod may only
+              # hold link-local addresses for a while. Solicit the router on each rail and wait for a
+              # global address (the RoCE v2 GID NCCL needs) instead of racing the next periodic RA.
+              for i in $(seq 1 60); do
+                missing=""
+                for dev in $(echo "$hcas" | tr ',' ' '); do
+                  ip -6 addr show dev "$dev" scope global 2>/dev/null | grep -q inet6 || { missing="$missing $dev"; rdisc6 -1 -q -w 1000 "$dev" >/dev/null 2>&1 || true; }
+                done
+                [ -z "$missing" ] && break
+                sleep 2
+              done
+              [ -z "$missing" ] || { echo "PRECHECK-FAILED: no global IPv6 address after 2 min on:${missing}"; ip -6 addr; exit 3; }
+              ip -6 -br addr show scope global | grep rdma_vf | sed 's/^/  /'
               # The RoCE v2 GID index is DISCOVERED from the GID table, never assumed (see bench/gid.py).
               python -m bench gid || true
-              eval "$(python -m bench gid --export)" || { echo "PRECHECK-FAILED: no consistent RoCE v2 GID index"; exit 3; }
+              gid_export=$(python -m bench gid --export --wait 60) || { echo "PRECHECK-FAILED: no consistent global RoCE v2 GID index across ${hcas}"; exit 3; }
+              eval "$gid_export"
               echo "NCCL_IB_HCA=${NCCL_IB_HCA} NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX}"
               python -m bench sysinfo > /results/${RUN_ID}.sysinfo.${NODE_RANK}.json 2>/dev/null || true
               exec torchrun --nnodes=${NNODES} --nproc_per_node=${NPROC_PER_NODE} --node_rank=${NODE_RANK} \

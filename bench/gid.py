@@ -200,7 +200,14 @@ def main(argv: list[str] | None = None) -> int:
     if not hcas:
         print("no RDMA devices under " + a.root, file=sys.stderr)
         return 2
-    r = discover(hcas, root=a.root, want_ndev=a.ndev, want_addr=a.addr)
+    import time  # noqa: PLC0415
+
+    deadline = time.monotonic() + a.wait
+    while True:
+        r = discover(hcas, root=a.root, want_ndev=a.ndev, want_addr=a.addr)
+        if r["consistent"] or time.monotonic() >= deadline:
+            break
+        time.sleep(1.0)
     if a.export:
         if not r["consistent"]:
             print("# GID discovery failed: " + json.dumps(r["chosen"]), file=sys.stderr)
