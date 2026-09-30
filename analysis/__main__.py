@@ -35,6 +35,7 @@ def main(argv=None) -> int:
         "e3_scaling": tables.e3_scaling(tr) if not tr.empty else None,
         "e4_before_after": tables.e4_before_after(sw) if not sw.empty else None,
         "e5_sensitivity": tables.e5_table(sw) if not sw.empty else None,
+        "e5_ddp_bucket": tables.e5_training_table(tr) if not tr.empty else None,
     }
     written = tables.write_tables(frames, os.path.join(out, "tables"))
     ch: dict[str, str] = {}

@@ -36,3 +36,24 @@
 2026-09-30T06:28:55Z run  e3-g4
 2026-09-30T06:29:33Z FAIL e3-g4: job failed (Job has reached the specified backoff limit)
 2026-09-30T06:30:15Z matrix pass complete: 10 result(s)
+2026-09-30T06:31:06Z run  e3-g2
+2026-09-30T06:32:05Z done e3-g2 in 59s: PERF {"world": 2, "samples_per_s": 709.91, "step_s": 0.0225, "comm_fraction": 0.057, "loss_first": 10.833297729492188, "loss_last": 10.845436096191406}
+2026-09-30T06:32:46Z run  e3-g4
+2026-09-30T06:33:49Z done e3-g4 in 63s: PERF {"world": 4, "samples_per_s": 1191.15, "step_s": 0.0269, "comm_fraction": 0.78, "loss_first": 10.833297729492188, "loss_last": 10.835899353027344}
+2026-09-30T06:34:30Z matrix pass complete: 12 result(s)
+2026-09-30T06:34:31Z run  e3-g8-nvlink
+2026-09-30T06:35:34Z done e3-g8-nvlink in 63s: PERF {"world": 8, "samples_per_s": 2803.58, "step_s": 0.0228, "comm_fraction": 0.696, "loss_first": 10.833297729492188, "loss_last": 10.839859008789062}
+2026-09-30T06:36:15Z run  e3-g8-rdma
+2026-09-30T06:37:24Z done e3-g8-rdma in 69s: PERF {"world": 8, "samples_per_s": 2090.01, "step_s": 0.0306, "comm_fraction": 0.912, "loss_first": 10.833297729492188, "loss_last": 10.842521667480469}
+2026-09-30T06:38:05Z matrix pass complete: 14 result(s)
+2026-09-30T06:38:58Z run  e4-qps1-r0
+2026-09-30T06:39:47Z done e4-qps1-r0 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.018435, "algbw_GBs": 232.984, "busbw_GBs": 407.722, "spread_pct": 0.04, "slowest_rank": 4, "c
+2026-09-30T06:40:28Z run  e4-qps1-r1
+2026-09-30T06:41:17Z done e4-qps1-r1 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.019608, "algbw_GBs": 219.041, "busbw_GBs": 383.322, "spread_pct": 0.08, "slowest_rank": 4, "c
+2026-09-30T06:41:58Z run  e4-qps1-r2
+2026-09-30T06:42:46Z done e4-qps1-r2 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.01912, "algbw_GBs": 224.637, "busbw_GBs": 393.114, "spread_pct": 0.14, "slowest_rank": 4, "co
+2026-09-30T06:43:27Z run  e4-qps1-r3
+2026-09-30T06:44:15Z done e4-qps1-r3 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.016815, "algbw_GBs": 255.428, "busbw_GBs": 446.999, "spread_pct": 0.07, "slowest_rank": 5, "c
+2026-09-30T06:44:56Z run  e4-qps1-r4
+2026-09-30T06:45:45Z done e4-qps1-r4 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.018384, "algbw_GBs": 233.623, "busbw_GBs": 408.84, "spread_pct": 0.1, "slowest_rank": 1, "cor
+2026-09-30T06:46:26Z matrix pass complete: 19 result(s)

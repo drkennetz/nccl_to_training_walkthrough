@@ -50,6 +50,7 @@ def build_summary(
             "before_after_box",
         ),
         ("e5_sensitivity", "E5 — sensitivity appendix (bus bandwidth GB/s)", None),
+        ("e5_ddp_bucket", "E5 — DDP bucket size on the RDMA path (communication frequency)", None),
     ]
     for key, title, chart in sections:
         lines += [f"## {title}", ""]

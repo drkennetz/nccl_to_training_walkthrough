@@ -42,7 +42,11 @@ def e2_table(df: pd.DataFrame) -> pd.DataFrame:
 def e3_scaling(tr: pd.DataFrame) -> pd.DataFrame:
     if tr.empty:
         return tr
-    t = tr.sort_values(["gpus", "transport"]).copy()
+    t = (
+        tr[tr.experiment == "E3"].sort_values(["gpus", "transport"]).copy()
+        if "experiment" in tr.columns
+        else tr.sort_values(["gpus", "transport"]).copy()
+    )
     base = t[t.gpus == 1]["samples_per_s"]
     b = float(base.iloc[0]) if len(base) else float("nan")
     t["speedup"] = t["samples_per_s"] / b
@@ -113,6 +117,29 @@ def e5_table(df: pd.DataFrame) -> pd.DataFrame:
     t = d.pivot_table(index="run_id", columns="bytes", values="busbw_GBs", aggfunc="mean").reset_index()
     t.columns = [c if c == "run_id" else format_size(int(c)) for c in t.columns]
     return t
+
+
+def e5_training_table(tr: pd.DataFrame) -> pd.DataFrame:
+    """E5 DDP variants (e.g. a larger DDP bucket) next to their E3 twin (same gpus + transport)."""
+    if tr.empty or "experiment" not in tr.columns or not (tr.experiment == "E5").any():
+        return pd.DataFrame()
+    rows = []
+    for r in tr[tr.experiment == "E5"].itertuples():
+        twin = tr[(tr.experiment == "E3") & (tr.gpus == r.gpus) & (tr.transport == r.transport)]
+        base = float(twin.samples_per_s.iloc[0]) if len(twin) else float("nan")
+        rows.append(
+            {
+                "run_id": r.run_id,
+                "gpus": r.gpus,
+                "transport": r.transport,
+                "bucket_cap_mb": r.bucket_cap_mb,
+                "samples_per_s": r.samples_per_s,
+                "comm_fraction": r.comm_fraction,
+                "baseline_samples_per_s": base,
+                "delta_pct": 100.0 * (r.samples_per_s / base - 1.0) if base == base else float("nan"),
+            }
+        )
+    return pd.DataFrame(rows)
 
 
 def write_tables(frames: dict[str, pd.DataFrame], out_dir: str) -> list[str]:

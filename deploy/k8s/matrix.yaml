@@ -72,3 +72,5 @@ experiments:
   - {id: e5-algo-tree,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_ALGO: Tree}}
   - {id: e5-algo-nvls,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_ALGO: NVLS}}
   - {id: e5-sock-nthreads4, experiment: E5, entrypoint: allreduce, transport: tcp, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_SOCKET_NTHREADS: "4", NCCL_NSOCKS_PERTHREAD: "4"}}
+  # communication frequency on the workload: fewer, larger gradient buckets over the rails (twin of e3-g8-rdma)
+  - {id: e5-ddp-bucket200, experiment: E5, entrypoint: ddp, transport: rdma, nnodes: 2, args: [--bucket-cap-mb, "200"]}
