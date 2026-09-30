@@ -137,9 +137,10 @@ spec:
             - {name: NCCL_DEBUG, value: "INFO"}
             - {name: NCCL_DEBUG_SUBSYS, value: "INIT,GRAPH,NET"}
             - {name: NCCL_CUMEM_ENABLE, value: "1"}
-            - {name: NCCL_SOCKET_IFNAME, value: "net0"}
+            - {name: NCCL_SOCKET_IFNAME, value: "rdma_vf_rail"}
             - {name: NCCL_MNNVL_ENABLE, value: "0"}
             - {name: NCCL_IB_DISABLE, value: "1"}
+            - {name: NCCL_SOCKET_FAMILY, value: "AF_INET6"}
           command: ["/bin/bash", "-lc"]
           args:
             - |

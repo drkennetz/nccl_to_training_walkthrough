@@ -39,7 +39,8 @@ transports:
   tcp-rail:                                # sockets over ONE rail's IPVLAN child: Ethernet vs RoCE on the same wire
     imex: false
     rails: 1
-    env: {NCCL_MNNVL_ENABLE: "0", NCCL_IB_DISABLE: "1", NCCL_SOCKET_IFNAME: net0}
+    # the IPVLAN child keeps the parent VF's name inside the pod
+    env: {NCCL_MNNVL_ENABLE: "0", NCCL_IB_DISABLE: "1", NCCL_SOCKET_IFNAME: rdma_vf_rail, NCCL_SOCKET_FAMILY: AF_INET6}
 
 experiments:
   # E1 — all-reduce message-size sweep per transport (8 ranks = 2 trays x 4 GPUs)

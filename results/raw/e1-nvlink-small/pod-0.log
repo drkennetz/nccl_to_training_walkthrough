@@ -1,0 +1,72 @@
+=== e1-nvlink-small node_rank=0 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 4
+IMEX channels: channel0 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if101       UP             10.42.2.160/32 fe80::84f1:1bff:fe35:a9c8/64 
+W0930 06:13:26.888000 1 torch/distributed/run.py:766] 
+W0930 06:13:26.888000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:13:26.888000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:13:26.888000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-4KiB", "event": "start", "t": 1790748832.9507241}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-4KiB", "event": "end", "t": 1790748832.9533942}
+PHASE {"name": "timed-4KiB", "event": "start", "t": 1790748832.9536362}
+PHASE {"name": "timed-4KiB", "event": "end", "t": 1790748832.9662967}
+PERF {"bytes": 4096, "size": "4KiB", "iters": 200, "mean_s": 6e-05, "algbw_GBs": 0.068, "busbw_GBs": 0.12, "spread_pct": 6.54, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-8KiB", "event": "start", "t": 1790748835.2409897}
+PHASE {"name": "warmup-8KiB", "event": "end", "t": 1790748835.2433224}
+PHASE {"name": "timed-8KiB", "event": "start", "t": 1790748835.2437706}
+PHASE {"name": "timed-8KiB", "event": "end", "t": 1790748835.258417}
+PERF {"bytes": 8192, "size": "8KiB", "iters": 200, "mean_s": 6.9e-05, "algbw_GBs": 0.119, "busbw_GBs": 0.208, "spread_pct": 8.35, "slowest_rank": 0, "correct": true}
+PHASE {"name": "warmup-16KiB", "event": "start", "t": 1790748835.2626717}
+PHASE {"name": "warmup-16KiB", "event": "end", "t": 1790748835.264868}
+PHASE {"name": "timed-16KiB", "event": "start", "t": 1790748835.265276}
+PHASE {"name": "timed-16KiB", "event": "end", "t": 1790748835.2792194}
+PERF {"bytes": 16384, "size": "16KiB", "iters": 200, "mean_s": 6.6e-05, "algbw_GBs": 0.248, "busbw_GBs": 0.433, "spread_pct": 8.33, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-32KiB", "event": "start", "t": 1790748835.28341}
+PHASE {"name": "warmup-32KiB", "event": "end", "t": 1790748835.2873812}
+PHASE {"name": "timed-32KiB", "event": "start", "t": 1790748835.2877862}
+PHASE {"name": "timed-32KiB", "event": "end", "t": 1790748835.3032029}
+PERF {"bytes": 32768, "size": "32KiB", "iters": 200, "mean_s": 7.4e-05, "algbw_GBs": 0.444, "busbw_GBs": 0.778, "spread_pct": 5.23, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-64KiB", "event": "start", "t": 1790748835.3074396}
+PHASE {"name": "warmup-64KiB", "event": "end", "t": 1790748835.3095338}
+PHASE {"name": "timed-64KiB", "event": "start", "t": 1790748835.309935}
+PHASE {"name": "timed-64KiB", "event": "end", "t": 1790748835.3264503}
+PERF {"bytes": 65536, "size": "64KiB", "iters": 200, "mean_s": 8e-05, "algbw_GBs": 0.824, "busbw_GBs": 1.442, "spread_pct": 2.8, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-128KiB", "event": "start", "t": 1790748835.330881}
+PHASE {"name": "warmup-128KiB", "event": "end", "t": 1790748835.3330026}
+PHASE {"name": "timed-128KiB", "event": "start", "t": 1790748835.3333967}
+PHASE {"name": "timed-128KiB", "event": "end", "t": 1790748835.352352}
+PERF {"bytes": 131072, "size": "128KiB", "iters": 200, "mean_s": 9.1e-05, "algbw_GBs": 1.437, "busbw_GBs": 2.515, "spread_pct": 6.44, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-256KiB", "event": "start", "t": 1790748835.3565867}
+PHASE {"name": "warmup-256KiB", "event": "end", "t": 1790748835.3587177}
+PHASE {"name": "timed-256KiB", "event": "start", "t": 1790748835.3591456}
+PHASE {"name": "timed-256KiB", "event": "end", "t": 1790748835.3728783}
+PERF {"bytes": 262144, "size": "256KiB", "iters": 200, "mean_s": 6.5e-05, "algbw_GBs": 4.015, "busbw_GBs": 7.026, "spread_pct": 8.49, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-512KiB", "event": "start", "t": 1790748835.3770592}
+PHASE {"name": "warmup-512KiB", "event": "end", "t": 1790748835.3791385}
+PHASE {"name": "timed-512KiB", "event": "start", "t": 1790748835.379557}
+PHASE {"name": "timed-512KiB", "event": "end", "t": 1790748835.3980153}
+PERF {"bytes": 524288, "size": "512KiB", "iters": 200, "mean_s": 8.9e-05, "algbw_GBs": 5.893, "busbw_GBs": 10.312, "spread_pct": 3.03, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-1MiB", "event": "start", "t": 1790748835.404119}
+PHASE {"name": "warmup-1MiB", "event": "end", "t": 1790748835.4062154}
+PHASE {"name": "timed-1MiB", "event": "start", "t": 1790748835.4066355}
+PHASE {"name": "timed-1MiB", "event": "end", "t": 1790748835.423965}
+PERF {"bytes": 1048576, "size": "1MiB", "iters": 200, "mean_s": 8.3e-05, "algbw_GBs": 12.607, "busbw_GBs": 22.062, "spread_pct": 3.93, "slowest_rank": 1, "correct": true}
+RANK1 host=gpu-3uwoq-6g3ya-2 local_rank=1 done
+RANK3 host=gpu-3uwoq-6g3ya-2 local_rank=3 doneRANK2 host=gpu-3uwoq-6g3ya-2 local_rank=2 doneRANK0 host=gpu-3uwoq-6g3ya-2 local_rank=0 done
+
+
+TRANSPORT {"mnnvl_channels": 256, "net_ib_channels": 0, "net_ib_gdr_channels": 0, "net_socket_channels": 0, "p2p_channels": 256, "shm_channels": 0, "ranks_reporting": 8, "path": "nvlink", "network": "Socket", "mnnvl": "1"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e1-nvlink-small/result.json

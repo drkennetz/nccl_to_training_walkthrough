@@ -1,0 +1,42 @@
+=== e1-tcp node_rank=0 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if105       UP             10.42.2.112/32 fe80::24ee:71ff:fea4:9a4e/64 
+W0930 06:14:50.675000 1 torch/distributed/run.py:766] 
+W0930 06:14:50.675000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:14:50.675000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:14:50.675000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-16MiB", "event": "start", "t": 1790748917.1661105}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-16MiB", "event": "end", "t": 1790748917.9063573}
+PHASE {"name": "timed-16MiB", "event": "start", "t": 1790748917.9065542}
+PHASE {"name": "timed-16MiB", "event": "end", "t": 1790748918.7038813}
+PERF {"bytes": 16777216, "size": "16MiB", "iters": 100, "mean_s": 0.007973, "algbw_GBs": 2.104, "busbw_GBs": 3.683, "spread_pct": 0.07, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-512MiB", "event": "start", "t": 1790748921.014809}
+PHASE {"name": "warmup-512MiB", "event": "end", "t": 1790748923.1250913}
+PHASE {"name": "timed-512MiB", "event": "start", "t": 1790748923.1253855}
+PHASE {"name": "timed-512MiB", "event": "end", "t": 1790748927.3440928}
+PERF {"bytes": 536870912, "size": "512MiB", "iters": 20, "mean_s": 0.210637, "algbw_GBs": 2.549, "busbw_GBs": 4.46, "spread_pct": 0.28, "slowest_rank": 3, "correct": true}
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790748927.3495803}
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790748932.7195354}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790748932.7196822}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790748941.8508127}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 1.826221, "algbw_GBs": 2.352, "busbw_GBs": 4.116, "spread_pct": 0.0, "slowest_rank": 7, "correct": true}
+RANK1 host=gpu-3uwoq-6g3ya-2 local_rank=1 doneRANK2 host=gpu-3uwoq-6g3ya-2 local_rank=2 done
+
+RANK0 host=gpu-3uwoq-6g3ya-2 local_rank=0 done
+RANK3 host=gpu-3uwoq-6g3ya-2 local_rank=3 done
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 0, "net_ib_gdr_channels": 0, "net_socket_channels": 256, "p2p_channels": 448, "shm_channels": 0, "ranks_reporting": 8, "path": "tcp", "network": "Socket", "mnnvl": "0"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e1-tcp/result.json

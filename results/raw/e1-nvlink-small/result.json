@@ -1,0 +1,377 @@
+{
+  "artifacts": {
+    "counters_csv": [
+      "counters.gpu-3uwoq-6g3ya-1.csv",
+      "counters.gpu-3uwoq-6g3ya-2.csv"
+    ],
+    "nccl_debug_file_pattern": "/tmp/nccl_debug.%p.log",
+    "pod_logs": [
+      "pod-0.log",
+      "pod-1.log"
+    ],
+    "ranks_csv": "ranks.csv"
+  },
+  "experiment": "E1",
+  "image": {
+    "ref": "quay.io/drkennetz/ktlo-labs:compass-latest"
+  },
+  "nccl": {
+    "gid_index": null,
+    "hcas": [],
+    "mnnvl": "1",
+    "network": "Socket",
+    "path": "nvlink",
+    "sample": [
+      "compass-e1-nvlink-small-0:255:284 [0] NCCL INFO Pattern 4, crossNic 0, nChannels 16, bw 45.000000/45.000000, type NVL/PIX, sameChannels 1",
+      "compass-e1-nvlink-small-0:255:284 [0] NCCL INFO Pattern 1, crossNic 0, nChannels 16, bw 40.000000/40.000000, type NVL/PIX, sameChannels 1",
+      "compass-e1-nvlink-small-0:255:284 [0] NCCL INFO Pattern 5, crossNic 0, nChannels 8, bw 80.000000/90.000000, type NVL/PIX, sameChannels 0"
+    ],
+    "selected_ib_hca": "",
+    "socket_ifname": "eth0",
+    "transport_counts": {
+      "mnnvl_channels": 256,
+      "net_ib_channels": 0,
+      "net_ib_gdr_channels": 0,
+      "net_socket_channels": 0,
+      "p2p_channels": 256,
+      "ranks_reporting": 8,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "warmup-4KiB",
+      "t_end": 1790748832.9533942,
+      "t_start": 1790748832.9507241
+    },
+    {
+      "name": "timed-4KiB",
+      "t_end": 1790748832.9662967,
+      "t_start": 1790748832.9536362
+    },
+    {
+      "name": "warmup-8KiB",
+      "t_end": 1790748835.2433224,
+      "t_start": 1790748835.2409897
+    },
+    {
+      "name": "timed-8KiB",
+      "t_end": 1790748835.258417,
+      "t_start": 1790748835.2437706
+    },
+    {
+      "name": "warmup-16KiB",
+      "t_end": 1790748835.264868,
+      "t_start": 1790748835.2626717
+    },
+    {
+      "name": "timed-16KiB",
+      "t_end": 1790748835.2792194,
+      "t_start": 1790748835.265276
+    },
+    {
+      "name": "warmup-32KiB",
+      "t_end": 1790748835.2873812,
+      "t_start": 1790748835.28341
+    },
+    {
+      "name": "timed-32KiB",
+      "t_end": 1790748835.3032029,
+      "t_start": 1790748835.2877862
+    },
+    {
+      "name": "warmup-64KiB",
+      "t_end": 1790748835.3095338,
+      "t_start": 1790748835.3074396
+    },
+    {
+      "name": "timed-64KiB",
+      "t_end": 1790748835.3264503,
+      "t_start": 1790748835.309935
+    },
+    {
+      "name": "warmup-128KiB",
+      "t_end": 1790748835.3330026,
+      "t_start": 1790748835.330881
+    },
+    {
+      "name": "timed-128KiB",
+      "t_end": 1790748835.352352,
+      "t_start": 1790748835.3333967
+    },
+    {
+      "name": "warmup-256KiB",
+      "t_end": 1790748835.3587177,
+      "t_start": 1790748835.3565867
+    },
+    {
+      "name": "timed-256KiB",
+      "t_end": 1790748835.3728783,
+      "t_start": 1790748835.3591456
+    },
+    {
+      "name": "warmup-512KiB",
+      "t_end": 1790748835.3791385,
+      "t_start": 1790748835.3770592
+    },
+    {
+      "name": "timed-512KiB",
+      "t_end": 1790748835.3980153,
+      "t_start": 1790748835.379557
+    },
+    {
+      "name": "warmup-1MiB",
+      "t_end": 1790748835.4062154,
+      "t_start": 1790748835.404119
+    },
+    {
+      "name": "timed-1MiB",
+      "t_end": 1790748835.423965,
+      "t_start": 1790748835.4066355
+    }
+  ],
+  "run_id": "e1-nvlink-small",
+  "schema_version": "1.0",
+  "sweep": [
+    {
+      "algbw_GBs": 0.068,
+      "busbw_GBs": 0.12,
+      "bytes": 4096,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.00011423999816179275,
+      "mean_s": 5.9830659953877335e-05,
+      "min_s": 4.595199972391129e-05,
+      "p50_s": 5.9519998729228974e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 6.082319954410195e-05,
+        "rank_mean_min_s": 5.687631981447339e-05,
+        "rank_mean_p50_s": 6.0315520288422705e-05,
+        "slowest_rank": 5,
+        "spread_pct": 6.543721600601273
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 0.119,
+      "busbw_GBs": 0.208,
+      "bytes": 8192,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.0003908799886703491,
+      "mean_s": 6.883569998200983e-05,
+      "min_s": 4.5152001082897183e-05,
+      "p50_s": 6.729599833488465e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 7.057919936254621e-05,
+        "rank_mean_min_s": 6.479471987113357e-05,
+        "rank_mean_p50_s": 6.92644003406167e-05,
+        "slowest_rank": 0,
+        "spread_pct": 8.351302347189474
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 0.248,
+      "busbw_GBs": 0.433,
+      "bytes": 16384,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.00012751999497413635,
+      "mean_s": 6.619084011996165e-05,
+      "min_s": 5.071999877691269e-05,
+      "p50_s": 6.57760016620159e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 6.723279947414994e-05,
+        "rank_mean_min_s": 6.167248029261827e-05,
+        "rank_mean_p50_s": 6.674408074468374e-05,
+        "slowest_rank": 5,
+        "spread_pct": 8.330804948534034
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 0.444,
+      "busbw_GBs": 0.778,
+      "bytes": 32768,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.0031110720634460447,
+      "mean_s": 7.373290009563788e-05,
+      "min_s": 4.11520004272461e-05,
+      "p50_s": 5.665599927306175e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 7.465199967846275e-05,
+        "rank_mean_min_s": 7.077520033344626e-05,
+        "rank_mean_p50_s": 7.406656018458307e-05,
+        "slowest_rank": 1,
+        "spread_pct": 5.23421006099787
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 0.824,
+      "busbw_GBs": 1.442,
+      "bytes": 65536,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.004275328159332276,
+      "mean_s": 7.95481804641895e-05,
+      "min_s": 3.951999917626381e-05,
+      "p50_s": 5.030399933457375e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 8.023264044895767e-05,
+        "rank_mean_min_s": 7.800384001806378e-05,
+        "rank_mean_p50_s": 7.956280024722217e-05,
+        "slowest_rank": 1,
+        "spread_pct": 2.801309687402198
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 1.437,
+      "busbw_GBs": 2.515,
+      "bytes": 131072,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.0049179520606994626,
+      "mean_s": 9.122104008682072e-05,
+      "min_s": 5.363199859857559e-05,
+      "p50_s": 6.668800115585327e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 9.231872057542204e-05,
+        "rank_mean_min_s": 8.641024118289352e-05,
+        "rank_mean_p50_s": 9.176959949545562e-05,
+        "slowest_rank": 1,
+        "spread_pct": 6.438384198049274
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 4.015,
+      "busbw_GBs": 7.026,
+      "bytes": 262144,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.0001395519971847534,
+      "mean_s": 6.529577992623672e-05,
+      "min_s": 4.979199916124344e-05,
+      "p50_s": 6.47360011935234e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 6.628031864762307e-05,
+        "rank_mean_min_s": 6.068768007680774e-05,
+        "rank_mean_p50_s": 6.58780006505549e-05,
+        "slowest_rank": 5,
+        "spread_pct": 8.48938722424361
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 5.893,
+      "busbw_GBs": 10.312,
+      "bytes": 524288,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.0038907840251922606,
+      "mean_s": 8.897350023966282e-05,
+      "min_s": 4.620800167322159e-05,
+      "p50_s": 6.376000121235847e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 8.992271954193711e-05,
+        "rank_mean_min_s": 8.721167994663119e-05,
+        "rank_mean_p50_s": 8.942104080691934e-05,
+        "slowest_rank": 1,
+        "spread_pct": 3.0317692243816357
+      },
+      "warmup": 50
+    },
+    {
+      "algbw_GBs": 12.607,
+      "busbw_GBs": 22.062,
+      "bytes": 1048576,
+      "correct": true,
+      "iters": 200,
+      "max_s": 0.004141088008880615,
+      "mean_s": 8.31768603879027e-05,
+      "min_s": 4.300799965858459e-05,
+      "p50_s": 6.326399743556976e-05,
+      "rank_variance": {
+        "rank_mean_max_s": 8.41468806564808e-05,
+        "rank_mean_min_s": 8.086592057719827e-05,
+        "rank_mean_p50_s": 8.340000081807375e-05,
+        "slowest_rank": 1,
+        "spread_pct": 3.934004852637244
+      },
+      "warmup": 50
+    }
+  ],
+  "timestamps": {
+    "end": "2026-09-30T06:13:56Z",
+    "start": "2026-09-30T06:13:55Z"
+  },
+  "topology": {
+    "cpu_affinity": "[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143]",
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "gpu-3uwoq-6g3ya-1",
+      "gpu-3uwoq-6g3ya-2"
+    ],
+    "ibdev2netdev": "mlx5_17 port 1 ==> - (1: DOWN)\nmlx5_8 port 1 ==> - (4: ACTIVE)\nrdma_rail0 port 1 ==> - (1: DOWN)\nrdma_rail1 port 1 ==> - (1: DOWN)\nrdma_rail2 port 1 ==> - (1: DOWN)\nrdma_rail3 port 1 ==> - (1: DOWN)\nrdma_vf_rail0 port 1 ==> - (4: ACTIVE)\nrdma_vf_rail1 port 1 ==> - (4: ACTIVE)\nrdma_vf_rail2 port 1 ==> - (4: ACTIVE)\nrdma_vf_rail3 port 1 ==> - (4: ACTIVE)",
+    "numa": {
+      "0": {
+        "bdf": "00000008:06:00.0",
+        "numa_node": null
+      },
+      "1": {
+        "bdf": "00000009:06:00.0",
+        "numa_node": null
+      },
+      "2": {
+        "bdf": "00000018:06:00.0",
+        "numa_node": null
+      },
+      "3": {
+        "bdf": "00000019:06:00.0",
+        "numa_node": null
+      }
+    },
+    "nvidia_smi_topo": "\u001b[4mGPU0\tGPU1\tGPU2\tGPU3\tNIC0\tNIC1\tNIC2\tNIC3\tNIC4\tNIC5\tCPU Affinity\tNUMA Affinity\tGPU NUMA ID\u001b[0m\nGPU0\t X \tNV18\tNV18\tNV18\tNODE\tSYS\tNODE\tNODE\tSYS\tSYS\t0-71\t0\t\tN/A\nGPU1\tNV18\t X \tNV18\tNV18\tNODE\tSYS\tNODE\tNODE\tSYS\tSYS\t0-71\t0\t\tN/A\nGPU2\tNV18\tNV18\t X \tNV18\tSYS\tNODE\tSYS\tSYS\tNODE\tNODE\t72-143\t1\t\tN/A\nGPU3\tNV18\tNV18\tNV18\t X \tSYS\tNODE\tSYS\tSYS\tNODE\tNODE\t72-143\t1\t\tN/A\nNIC0\tNODE\tNODE\tSYS\tSYS\t X \tSYS\tNODE\tNODE\tSYS\tSYS\t\t\t\t\nNIC1\tSYS\tSYS\tNODE\tNODE\tSYS\t X \tSYS\tSYS\tNODE\tNODE\t\t\t\t\nNIC2\tNODE\tNODE\tSYS\tSYS\tNODE\tSYS\t X \tNODE\tSYS\tSYS\t\t\t\t\nNIC3\tNODE\tNODE\tSYS\tSYS\tNODE\tSYS\tNODE\t X \tSYS\tSYS\t\t\t\t\nNIC4\tSYS\tSYS\tNODE\tNODE\tSYS\tNODE\tSYS\tSYS\t X \tNODE\t\t\t\t\nNIC5\tSYS\tSYS\tNODE\tNODE\tSYS\tNODE\tSYS\tSYS\tNODE\t X \t\t\t\t\n\nLegend:\n\n  X    = Self\n  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)\n  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node\n  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)\n  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)\n  PIX  = Connection traversing at most a single PCIe bridge\n  NV#  = Connection traversing a bonded set of # NVLinks\n\nNIC Legend:\n\n  NIC0: mlx5_8\n  NIC1: mlx5_17\n  NIC2: rdma_vf_rail0\n  NIC3: rdma_vf_rail1\n  NIC4: rdma_vf_rail2\n  NIC5: rdma_vf_rail3",
+    "pod_interfaces": "lo               UNKNOWN        127.0.0.1/8 ::1/128 \neth0@if101       UP             10.42.2.160/32 fe80::84f1:1bff:fe35:a9c8/64",
+    "ranks_per_host": {
+      "gpu-3uwoq-6g3ya-1": 4,
+      "gpu-3uwoq-6g3ya-2": 4
+    },
+    "rdma_link": "link mlx5_8/1 state ACTIVE physical_state LINK_UP \nlink mlx5_17/1 state DOWN physical_state DISABLED \nlink rdma_rail0/1 state DOWN physical_state DISABLED \nlink rdma_rail0/2 state ACTIVE physical_state LINK_UP \nlink rdma_rail0/3 state DOWN physical_state DISABLED \nlink rdma_rail0/4 state DOWN physical_state DISABLED \nlink rdma_rail0/5 state DOWN physical_state DISABLED \nlink rdma_rail0/6 state DOWN physical_state DISABLED \nlink rdma_rail0/7 state DOWN physical_state DISABLED \nlink rdma_rail0/8 state DOWN physical_state DISABLED \nlink rdma_rail0/9 state DOWN physical_state DISABLED \nlink rdma_rail0/10 state DOWN physical_state DISABLED \nlink rdma_rail0/11 state DOWN physical_state DISABLED \nlink rdma_rail0/12 state DOWN physical_state DISABLED \nlink rdma_rail0/13 state DOWN physical_state DISABLED \nlink rdma_rail0/14 state DOWN physical_state DISABLED \nlink rdma_rail0/15 state DOWN physical_state DISABLED \nlink rdma_rail0/16 state DOWN physical_state DISABLED \nlink rdma_rail0/17 state DOWN physical_state DISABLED \nlink rdma_rail0/18 state ACTIVE physical_state LINK_UP \nlink rdma_rail0/19 state DOWN physical_state DISABLED \nlink rdma_rail0/20 state DOWN physical_state DISABLED \nlink rdma_rail0/21 state DOWN physical_state DISABLED \nlink rdma_rail0/22 state DOWN physical_state DISABLED \nlink rdma_rail0/23 state DOWN physical_state DISABLED \nlink rdma_rail0/24 state DOWN physical_state DISABLED \nlink rdma_rail0/25 state DOWN physical_state DISABLED \nlink rdma_rail0/26 state DOWN physical_state DISABLED \nlink rdma_rail0/27 state DOWN physical_state DISABLED \nlink rdma_rail0/28 state DOWN physical_state DISABLED \nlink rdma_rail0/29 state DOWN physical_state DISABLED \nlink rdma_rail0/30 state DOWN physical_state DISABLED \nlink rdma_rail0/31 state DOWN physical_state DISABLED \nlink rdma_rail0/32 state DOWN physical_state DISABLED \nlink rdma_rail0/33 state DOWN physical_state DISABLED \nlink rdma_rail0/34 state DOWN physical_state DISABLED \nlink rdma_rail0/35 state DOWN physical_state DISABLED \nlink rdma_rail0/36 state ACTIVE physical_state LINK_UP \nlink rdma_rail0/37 state DOWN physical_state DISABLED \nlink rdma_rail0/38 state DOWN physical_state DISABLED \nlink rdma_rail0/39 state DOWN physical_state DISABLED \nlink rdma_rail0/40 state DOWN physical_state DISABLED \nlink rdma_rail0/41 state DOWN physical_state DISABLED \nlink rdma_rail0/42 state DOWN physical_state DISABLED \nlink rdma_rail0/43 state DOWN physical_state DISABLED \nlink rdma_rail0/44 state DOWN physical_state DISABLED \nlink rdma_rail0/45 state DOWN physical_state DISABLED \nlink rdma_rail0/46 state DOWN physical_state DISABLED \nlink rdma_rail0/47 state DOWN physical_state DISABLED \nlink rdma_rail0/48 state DOWN physical_state DISABLED \nlink rdma_rail0/49 state DOWN physical_state DISABLED \nlink rdma_rail0/50 state DOWN physical_state DISABLED \nlink rdma_rail0/51 state DOWN physical_state DISABLED \nlink rdma_rail0/52 state DOWN physical_state DISABLED \nlink rdma_rail0/53 state DOWN physical_state DISABLED \nlink rdma_rail0/54 state ACTIVE physical_state LINK_UP \nlink rdma_rail0/55 state DOWN physical_state DISABLED \nlink rdma_rail0/56 state DOWN physical_state DISABLED \nlink rdma_rail0/57 state DOWN physical_state DISABLED \nlink rdma_rail0/58 state DOWN physical_state DISABLED \nlink rdma_rail0/59 state DOWN physical_state DISABLED \nlink rdma_rail0/60 state DOWN physical_state DISABLED \nlink rdma_rail0/61 state DOWN physical_state DISABLED \nlink rdma_rail0/62 state DOWN physical_state DISABLED \nlink rdma_rail0/63 state DOWN physical_state DISABLED \nlink rdma_rail0/64 state DOWN physical_state DISABLED \nlink rdma_rail0/65 state DOWN physical_state DISABLED \nlink rdma_rail0/66 state DOWN physical_state DISABLED \nlink rdma_rail0/67 state DOWN physical_state DISABLED \nlink rdma_rail0/68 state DOWN physical_state DISABLED \nlink rdma_rail0/69 state DOWN physical_state DISABLED \nlink rdma_rail0/70 state DOWN physical_state DISABLED \nlink rdma_rail0/71 state DOWN physical_state DISABLED \nlink rdma_rail0/72 state ACTIVE physical_state LINK_UP \nlink rdma_rail1/1 state DOWN physical_state DISABLED \nlink rdma_rail1/2 state ACTIVE physical_state LINK_UP \nlink rdma_rail1/3 state DOWN physical_state DISABLED \nlink rdma_rail1/4 state DOWN physical_state DISABLED \nlink rdma_rail1/5 state DOWN physical_state DISABLED \nlink rdma_rail1/6 state DOWN physical_state DISABLED \nlink rdma_rail1/7 state DOWN physical_state DISABLED \nlink rdma_rail1/8 state DOWN physical_state DISABLED \nlink rdma_rail1/9 state DOWN physical_state DISABLED \nlink rdma_rail1/10 state DOWN physical_state DISABLED \nlink rdma_rail1/11 state DOWN physical_state DISABLED \nlink rdma_rail1/12 state DOWN physical_state DISABLED \nlink rdma_rail1/13 state DOWN physical_state DISABLED \nlink rdma_rail1/14 state DOWN physical_state DISABLED \nlink rdma_rail1/15 state DOWN physical_state DISABLED \nlink rdma_rail1/16 state DOWN physical_state DISABLED \nlink rdma_rail1/17 state DOWN physical_state DISABLED \nlink rdma_rail1/18 state ACTIVE physical_state LINK_UP \nlink rdma_rail1/19 state DOWN physical_state DISABLED \nlink rdma_rail1/20 state DOWN physical_state DISABLED \nlink rdma_rail1/21 state DOWN physical_state DISABLED \nlink rdma_rail1/22 state DOWN physical_state DISABLED \nlink rdma_rail1/23 state DOWN physical_state DISABLED \nlink rdma_rail1/24 state DOWN physical_state DISABLED \nlink rdma_rail1/25 state DOWN physical_state DISABLED \nlink rdma_rail1/26 state DOWN physical_state DISABLED \nlink rdma_rail1/27 state DOWN physical_state DISABLED \nlink rdma_rail1/28 state DOWN physical_state DISABLED \nlink rdma_rail1/29 state DOWN physical_state DISABLED \nlink rdma_rail1/30 state DOWN physical_state DISABLED \nlink rdma_rail1/31 state DOWN physical_state DISABLED \nlink rdma_rail1/32 state DOWN physical_state DISABLED \nlink rdma_rail1/33 state DOWN physical_state DISABLED \nlink rdma_rail1/34 state DOWN physical_state DISABLED \nlink rdma_rail1/35 state DOWN physical_state DISABLED \nlink rdma_rail1/36 state ACTIVE physical_state LINK_UP \nlink rdma_rail1/37 state DOWN physical_state DISABLED \nlink rdma_rail1/38 state DOWN physical_state DISABLED \nlink rdma_rail1/39 state DOWN physical_state DISABLED \nlink rdma_rail1/40 state DOWN physical_state DISABLED \nlink rdma_rail1/41 state DOWN physical_state DISABLED \nlink rdma_rail1/42 state DOWN physical_state DISABLED \nlink rdma_rail1/43 state DOWN physical_state DISABLED \nlink rdma_rail1/44 state DOWN physical_state DISABLED \nlink rdma_rail1/45 state DOWN physical_state DISABLED \nlink rdma_rail1/46 state DOWN physical_state DISABLED \nlink rdma_rail1/47 state DOWN physical_state DISABLED \nlink rdma_rail1/48 state DOWN physical_state DISABLED \nlink rdma_rail1/49 state DOWN physical_state DISABLED \nlink rdma_rail1/50 state DOWN physical_state DISABLED \nlink rdma_rail1/51 state DOWN physical_state DISABLED \nlink rdma_rail1/52 state DOWN physical_state DISABLED \nlink rdma_rail1/53 state DOWN physical_state DISABLED \nlink rdma_rail1/54 state ACTIVE physical_state LINK_UP \nlink rdma_rail1/55 state DOWN physical_state DISABLED \nlink rdma_rail1/56 state DOWN physical_state DISABLED \nlink rdma_rail1/57 state DOWN physical_state DISABLED \nlink rdma_rail1/58 state DOWN physical_state DISABLED \nlink rdma_rail1/59 state DOWN physical_state DISABLED \nlink rdma_rail1/60 state DOWN physical_state DISABLED \nlink rdma_rail1/61 state DOWN physical_state DISABLED \nlink rdma_rail1/62 state DOWN physical_state DISABLED \nlink rdma_rail1/63 state DOWN physical_state DISABLED \nlink rdma_rail1/64 state DOWN physical_state DISABLED \nlink rdma_rail1/65 state DOWN physical_state DISABLED \nlink rdma_rail1/66 state DOWN physical_state DISABLED \nlink rdma_rail1/67 state DOWN physical_state DISABLED \nlink rdma_rail1/68 state DOWN physical_state DISABLED \nlink rdma_rail1/69 state DOWN physical_state DISABLED \nlink rdma_rail1/70 state DOWN physical_state DISABLED \nlink rdma_rail1/71 state DOWN physical_state DISABLED \nlink rdma_rail1/72 state ACTIVE physical_state LINK_UP \nlink rdma_rail2/1 state DOWN physical_state DISABLED \nlink rdma_rail2/2 state ACTIVE physical_state LINK_UP \nlink rdma_rail2/3 state DOWN physical_state DISABLED \nlink rdma_rail2/4 state DOWN physical_state DISABLED \nlink rdma_rail2/5 state DOWN physical_state DISABLED \nlink rdma_rail2/6 state DOWN physical_state DISABLED \nlink rdma_rail2/7 state DOWN physical_state DISABLED \nlink rdma_rail2/8 state DOWN physical_state DISABLED \nlink rdma_rail2/9 state DOWN physical_state DISABLED \nlink rdma_rail2/10 state DOWN physical_state DISABLED \nlink rdma_rail2/11 state DOWN physical_state DISABLED \nlink rdma_rail2/12 state DOWN physical_state DISABLED \nlink rdma_rail2/13 state DOWN physical_state DISABLED \nlink rdma_rail2/14 state DOWN physical_state DISABLED \nlink rdma_rail2/15 state DOWN physical_state DISABLED \nlink rdma_rail2/16 state DOWN physical_state DISABLED \nlink rdma_rail2/17 state DOWN physical_state DISABLED \nlink rdma_rail2/18 state ACTIVE physical_state LINK_UP \nlink rdma_rail2/19 state DOWN physical_state DISABLED \nlink rdma_rail2/20 state DOWN physical_state DISABLED \nlink rdma_rail2/21 state DOWN physical_state DISABLED \nlink rdma_rail2/22 state DOWN physical_state DISABLED \nlink rdma_rail2/23 state DOWN physical_state DISABLED \nlink rdma_rail2/24 state DOWN physical_state DISABLED \nlink rdma_rail2/25 state DOWN physical_state DISABLED \nlink rdma_rail2/26 state DOWN physical_state DISABLED \nlink rdma_rail2/27 state DOWN physical_state DISABLED \nlink rdma_rail2/28 state DOWN physical_state DISABLED \nlink rdma_rail2/29 state DOWN physical_state DISABLED \nlink rdma_rail2/30 state DOWN physical_state DISABLED \nlink rdma_rail2/31 state DOWN physical_state DISABLED \nlink rdma_rail2/32 state DOWN physical_state DISABLED \nlink rdma_rail2/33 state DOWN physical_state DISABLED \nlink rdma_rail2/34 state DOWN physical_state DISABLED \nlink rdma_rail2/35 state DOWN physical_state DISABLED \nlink rdma_rail2/36 state ACTIVE physical_state LINK_UP \nlink rdma_rail2/37 state DOWN physical_state DISABLED \nlink rdma_rail2/38 state DOWN physical_state DISABLED \nlink rdma_rail2/39 state DOWN physical_state DISABLED \nlink rdma_rail2/40 state DOWN physical_state DISABLED \nlink rdma_rail2/41 state DOWN physical_state DISABLED \nlink rdma_rail2/42 state DOWN physical_state DISABLED \nlink rdma_rail2/43 state DOWN physical_state DISABLED \nlink rdma_rail2/44 state DOWN physical_state DISABLED \nlink rdma_rail2/45 state DOWN physical_state DISABLED \nlink rdma_rail2/46 state DOWN physical_state DISABLED \nlink rdma_rail2/47 state DOWN physical_state DISABLED \nlink rdma_rail2/48 state DOWN physical_state DISABLED \nlink rdma_rail2/49 state DOWN physical_state DISABLED \nlink rdma_rail2/50 state DOWN physical_state DISABLED \nlink rdma_rail2/51 state DOWN physical_state DISABLED \nlink rdma_rail2/52 state DOWN physical_state DISABLED \nlink rdma_rail2/53 state DOWN physical_state DISABLED \nlink rdma_rail2/54 state ACTIVE physical_state LINK_UP \nlink rdma_rail2/55 state DOWN physical_state DISABLED \nlink rdma_rail2/56 state DOWN physical_state DISABLED \nlink rdma_rail2/57 state DOWN physical_state DISABLED \nlink rdma_rail2/58 state DOWN physical_state DISABLED \nlink rdma_rail2/59 state DOWN physical_state DISABLED \nlink rdma_rail2/60 state DOWN physical_state DISABLED \nlink rdma_rail2/61 state DOWN physical_state DISABLED \nlink rdma_rail2/62 state DOWN physical_state DISABLED \nlink rdma_rail2/63 state DOWN physical_state DISABLED \nlink rdma_rail2/64 state DOWN physical_state DISABLED \nlink rdma_rail2/65 state DOWN physical_state DISABLED \nlink rdma_rail2/66 state DOWN physical_state DISABLED \nlink rdma_rail2/67 state DOWN physical_state DISABLED \nlink rdma_rail2/68 state DOWN physical_state DISABLED \nlink rdma_rail2/69 state DOWN physical_state DISABLED \nlink rdma_rail2/70 state DOWN physical_state DISABLED \nlink rdma_rail2/71 state DOWN physical_state DISABLED \nlink rdma_rail2/72 state ACTIVE physical_state LINK_UP \nlink rdma_rail3/1 state DOWN physical_state DISABLED \nlink rdma_rail3/2 state ACTIVE physical_state LINK_UP \nlink rdma_rail3/3 state DOWN physical_state DISABLED \nlink rdma_rail3/4 state DOWN physical_state DISABLED \nlink rdma_rail3/5 state DOWN physical_state DISABLED \nlink rdma_rail3/6 state DOWN physical_state DISABLED \nlink rdma_rail3/7 state DOWN physical_state DISABLED \nlink rdma_rail3/8 state DOWN physical_state DISABLED \nlink rdma_rail3/9 state DOWN physical_state DISABLED \nlink rdma_rail3/10 state DOWN physical_state DISABLED \nlink rdma_rail3/11 state DOWN physical_state DISABLED \nlink rdma_rail3/12 state DOWN physical_state DISABLED \nlink rdma_rail3/13 state DOWN physical_state DISABLED \nlink rdma_rail3/14 state DOWN physical_state DISABLED \nlink rdma_rail3/15 state DOWN physical_state DISABLED \nlink rdma_rail3/16 state DOWN physical_state DISABLED \nlink rdma_rail3/17 state DOWN physical_state DISABLED \nlink rdma_rail3/18 state ACTIVE physical_state LINK_UP \nlink rdma_rail3/19 state DOWN physical_state DISABLED \nlink rdma_rail3/20 state DOWN physical_state DISABLED \nlink rdma_rail3/21 state DOWN physical_state DISABLED \nlink rdma_rail3/22 state DOWN physical_state DISABLED \nlink rdma_rail3/23 state DOWN physical_state DISABLED \nlink rdma_rail3/24 state DOWN physical_state DISABLED \nlink rdma_rail3/25 state DOWN physical_state DISABLED \nlink rdma_rail3/26 state DOWN physical_state DISABLED \nlink rdma_rail3/27 state DOWN physical_state DISABLED \nlink rdma_rail3/28 state DOWN physical_state DISABLED \nlink rdma_rail3/29 state DOWN physical_state DISABLED \nlink rdma_rail3/30 state DOWN physical_state DISABLED \nlink rdma_rail3/31 state DOWN physical_state DISABLED \nlink rdma_rail3/32 state DOWN physical_state DISABLED \nlink rdma_rail3/33 state DOWN physical_state DISABLED \nlink rdma_rail3/34 state DOWN physical_state DISABLED \nlink rdma_rail3/35 state DOWN physical_state DISABLED \nlink rdma_rail3/36 state ACTIVE physical_state LINK_UP \nlink rdma_rail3/37 state DOWN physical_state DISABLED \nlink rdma_rail3/38 state DOWN physical_state DISABLED \nlink rdma_rail3/39 state DOWN physical_state DISABLED \nlink rdma_rail3/40 state DOWN physical_state DISABLED \nlink rdma_rail3/41 state DOWN physical_state DISABLED \nlink rdma_rail3/42 state DOWN physical_state DISABLED \nlink rdma_rail3/43 state DOWN physical_state DISABLED \nlink rdma_rail3/44 state DOWN physical_state DISABLED \nlink rdma_rail3/45 state DOWN physical_state DISABLED \nlink rdma_rail3/46 state DOWN physical_state DISABLED \nlink rdma_rail3/47 state DOWN physical_state DISABLED \nlink rdma_rail3/48 state DOWN physical_state DISABLED \nlink rdma_rail3/49 state DOWN physical_state DISABLED \nlink rdma_rail3/50 state DOWN physical_state DISABLED \nlink rdma_rail3/51 state DOWN physical_state DISABLED \nlink rdma_rail3/52 state DOWN physical_state DISABLED \nlink rdma_rail3/53 state DOWN physical_state DISABLED \nlink rdma_rail3/54 state ACTIVE physical_state LINK_UP \nlink rdma_rail3/55 state DOWN physical_state DISABLED \nlink rdma_rail3/56 state DOWN physical_state DISABLED \nlink rdma_rail3/57 state DOWN physical_state DISABLED \nlink rdma_rail3/58 state DOWN physical_state DISABLED \nlink rdma_rail3/59 state DOWN physical_state DISABLED \nlink rdma_rail3/60 state DOWN physical_state DISABLED \nlink rdma_rail3/61 state DOWN physical_state DISABLED \nlink rdma_rail3/62 state DOWN physical_state DISABLED \nlink rdma_rail3/63 state DOWN physical_state DISABLED \nlink rdma_rail3/64 state DOWN physical_state DISABLED \nlink rdma_rail3/65 state DOWN physical_state DISABLED \nlink rdma_rail3/66 state DOWN physical_state DISABLED \nlink rdma_rail3/67 state DOWN physical_state DISABLED \nlink rdma_rail3/68 state DOWN physical_state DISABLED \nlink rdma_rail3/69 state DOWN physical_state DISABLED \nlink rdma_rail3/70 state DOWN physical_state DISABLED \nlink rdma_rail3/71 state DOWN physical_state DISABLED \nlink rdma_rail3/72 state ACTIVE physical_state LINK_UP \nlink rdma_vf_rail0/1 state ACTIVE physical_state LINK_UP \nlink rdma_vf_rail1/1 state ACTIVE physical_state LINK_UP \nlink rdma_vf_rail2/1 state ACTIVE physical_state LINK_UP \nlink rdma_vf_rail3/1 state ACTIVE physical_state LINK_UP"
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 8,
+    "world_size": 8
+  },
+  "variant": {
+    "label": "small",
+    "nccl_env": {
+      "NCCL_CUMEM_ENABLE": "1",
+      "NCCL_DEBUG": "INFO",
+      "NCCL_DEBUG_FILE": "/tmp/nccl_debug.%p.log",
+      "NCCL_DEBUG_SUBSYS": "INIT,GRAPH,NET",
+      "NCCL_MNNVL_ENABLE": "1",
+      "NCCL_NVLS_ENABLE": "1",
+      "NCCL_SOCKET_IFNAME": "eth0",
+      "NCCL_VERSION": "2.27.7"
+    },
+    "nnodes": 2,
+    "nproc_per_node": 4,
+    "rails": 0,
+    "repeat": 0,
+    "transport": "nvlink",
+    "world_size": 8
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "595.91.07",
+    "nccl": "2.27.7",
+    "python": "3.12.3",
+    "torch": "2.8.0a0+34c6371d24.nv25.08"
+  }
+}
