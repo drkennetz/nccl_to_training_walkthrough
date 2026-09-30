@@ -66,8 +66,12 @@ GPT-124M, bf16, 8 × 1024 tokens per GPU per step, DDP with the default 25 MiB b
 (`e3_scaling.csv`; "comm fraction" is NCCL kernel residency over step time from `torch.profiler`,
 which overlaps with backward compute — it is an upper bound on exposed communication.)
 
-Where accelerator time is lost: the step is ~21 ms of compute for ~250 MB of bf16 gradients, so
-the gradient all-reduce is a large share of every step; over the rails it becomes the step. The
+Where accelerator time is lost: the step is ~21 ms of compute for ~474 MiB of fp32 gradients, which DDP
+all-reduces in about 19 buckets of the default 25 MiB. That bucket size sits at the knee of the E1 size
+curve — already bandwidth-sensitive, but with the per-collective fixed cost still a third of each call —
+so the step depends on both the wire and the number of collectives. Same bucket size across transports
+isolates the wire (92 % vs 69 %); same transport across bucket sizes (E5, 25 → 200 MiB) isolates the
+per-collective cost (+32 %). Over the rails, the gradient exchange becomes the step. The
 1→4 GPU drop on one tray (93 % → 78 %) is the same effect intra-tray plus the launch overhead of a
 small model — not the network. Evidence separated from diagnosis: the network is *not* the problem
 on one tray (no NIC is involved); over two trays the transport is the difference (92 % vs 69 %).
