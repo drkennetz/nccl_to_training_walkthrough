@@ -1,0 +1,27 @@
+=== e3-g2 node_rank=0 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 2
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if141       UP             10.42.2.94/32 fe80::a4ab:55ff:fe09:e5eb/64 
+W0930 06:31:12.311000 1 torch/distributed/run.py:766] 
+W0930 06:31:12.311000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:31:12.311000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:31:12.311000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup", "event": "start", "t": 1790749897.6990297}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup", "event": "end", "t": 1790749916.2525573}
+PHASE {"name": "train", "event": "start", "t": 1790749916.2526703}
+PHASE {"name": "train", "event": "end", "t": 1790749917.3799074}
+PHASE {"name": "profile", "event": "start", "t": 1790749917.380193}
+PHASE {"name": "profile", "event": "end", "t": 1790749917.5749226}
+RANK1 host=gpu-3uwoq-6g3ya-2 local_rank=1 mean_step_s=0.0225
+RANK0 host=gpu-3uwoq-6g3ya-2 local_rank=0 mean_step_s=0.0225
+PERF {"world": 2, "samples_per_s": 709.91, "step_s": 0.0225, "comm_fraction": 0.057, "loss_first": 10.833297729492188, "loss_last": 10.845436096191406}
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 0, "net_ib_gdr_channels": 0, "net_socket_channels": 0, "p2p_channels": 64, "shm_channels": 0, "ranks_reporting": 2, "path": "unknown"}
+VALIDATION {"all_ok": true, "ranks_ok": 2, "world_size": 2}
+RESULT /results/e3-g2/result.json
