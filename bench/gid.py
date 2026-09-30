@@ -191,6 +191,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument(
         "--list-hcas", action="store_true", help="print the usable rail HCAs, comma-separated, and exit"
     )
+    ap.add_argument(
+        "--wait",
+        type=float,
+        default=0,
+        help="seconds to keep polling until every HCA has a global RoCE v2 GID (SLAAC takes a moment)",
+    )
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     hcas = a.hca or list_hcas(root=a.root)
