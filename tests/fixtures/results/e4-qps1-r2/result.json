@@ -1,0 +1,138 @@
+{
+  "artifacts": {},
+  "experiment": "E4",
+  "image": {
+    "ref": "quay.io/x/y:compass-fixture"
+  },
+  "nccl": {
+    "network": "IB",
+    "path": "rdma_gdr",
+    "transport_counts": {
+      "mnnvl_channels": 0,
+      "net_ib_channels": 640,
+      "net_ib_gdr_channels": 640,
+      "net_socket_channels": 0,
+      "p2p_channels": 512,
+      "ranks_reporting": 8,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "timed-16MiB",
+      "t_end": 1002.0,
+      "t_start": 1000.0
+    },
+    {
+      "name": "timed-512MiB",
+      "t_end": 1005.0,
+      "t_start": 1003.0
+    },
+    {
+      "name": "timed-4GiB",
+      "t_end": 1008.0,
+      "t_start": 1006.0
+    }
+  ],
+  "run_id": "e4-qps1-r2",
+  "schema_version": "1.0",
+  "sweep": [
+    {
+      "algbw_GBs": 27.054,
+      "busbw_GBs": 47.344,
+      "bytes": 16777216,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0006511459153958212,
+      "mean_s": 0.0006201389670436392,
+      "min_s": 0.00060153479803233,
+      "p50_s": 0.0006201389670436392,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0006387431360549483,
+        "rank_mean_min_s": 0.0006077361877027664,
+        "rank_mean_p50_s": 0.0006201389670436392,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 53.182,
+      "busbw_GBs": 93.069,
+      "bytes": 536870912,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.010599695745838566,
+      "mean_s": 0.010094948329370062,
+      "min_s": 0.00979209987948896,
+      "p50_s": 0.010094948329370062,
+      "rank_variance": {
+        "rank_mean_max_s": 0.010397796779251164,
+        "rank_mean_min_s": 0.00989304936278266,
+        "rank_mean_p50_s": 0.010094948329370062,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 53.322,
+      "busbw_GBs": 93.313,
+      "bytes": 4294967296,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.08457556033844871,
+      "mean_s": 0.08054815270328448,
+      "min_s": 0.07813170812218595,
+      "p50_s": 0.08054815270328448,
+      "rank_variance": {
+        "rank_mean_max_s": 0.08296459728438302,
+        "rank_mean_min_s": 0.0789371896492188,
+        "rank_mean_p50_s": 0.08054815270328448,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    }
+  ],
+  "timestamps": {
+    "end": "2026-09-30T05:42:28Z",
+    "start": "2026-09-30T05:42:28Z"
+  },
+  "topology": {
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "tray-0",
+      "tray-1"
+    ],
+    "ranks_per_host": {
+      "tray-0": 4,
+      "tray-1": 4
+    }
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 8,
+    "world_size": 8
+  },
+  "variant": {
+    "label": "",
+    "nccl_env": {
+      "NCCL_IB_QPS_PER_CONNECTION": "1",
+      "NCCL_MNNVL_ENABLE": "0"
+    },
+    "nnodes": 2,
+    "nproc_per_node": 4,
+    "rails": 4,
+    "repeat": 2,
+    "transport": "rdma",
+    "world_size": 8
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "580.65",
+    "nccl": "2.27.7",
+    "python": "3.12",
+    "torch": "2.8.0"
+  }
+}

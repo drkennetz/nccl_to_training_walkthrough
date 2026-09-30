@@ -151,10 +151,12 @@ spec:
               echo "interfaces   :"; ip -br addr | sed 's/^/  /'
               vis=$(nvidia-smi -L | grep -c '^GPU')
               [ "$vis" -eq "${NPROC_PER_NODE}" ] || { echo "PRECHECK-FAILED: claim yielded ${vis} GPU(s), expected ${NPROC_PER_NODE}"; exit 3; }
-              n=$(ls /sys/class/infiniband/ 2>/dev/null | grep -c '^rdma_vf_rail')
-              [ "$n" -eq "${EXPECT_HCAS}" ] || { echo "PRECHECK-FAILED: ${n} rdma_vf_rail* device(s) visible, expected ${EXPECT_HCAS}"; exit 3; }
-              # Which rails did the claim give us? Restrict NCCL to exactly those.
-              export NCCL_IB_HCA="=$(ls /sys/class/infiniband/ | grep '^rdma_vf_rail' | paste -sd,)"
+              # In shared RDMA netns mode sysfs lists every host rail; only the claimed ones have
+              # their uverbs char device in this pod. NCCL gets exactly those.
+              hcas=$(python -m bench gid --list-hcas || true)
+              n=$(echo "$hcas" | tr ',' '\n' | grep -c .)
+              [ "$n" -eq "${EXPECT_HCAS}" ] || { echo "PRECHECK-FAILED: ${n} usable rdma_vf_rail* device(s) (${hcas}), expected ${EXPECT_HCAS}"; exit 3; }
+              export NCCL_IB_HCA="=${hcas}"
               # The RoCE v2 GID index is DISCOVERED from the GID table, never assumed (see bench/gid.py).
               python -m bench gid || true
               eval "$(python -m bench gid --export)" || { echo "PRECHECK-FAILED: no consistent RoCE v2 GID index"; exit 3; }

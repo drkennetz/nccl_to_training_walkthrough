@@ -1,0 +1,3 @@
+grafana_url = "https://<stack>.grafana.net"
+# grafana_auth comes from TF_VAR_grafana_auth (source scripts/creds.sh)
+# prometheus_datasource_uid = "grafanacloud-prom"

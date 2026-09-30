@@ -7,6 +7,8 @@
 image:
   repository: quay.io/drkennetz/ktlo-labs
   tag: dranet-slaac-c70a33c
+imagePullSecrets:
+  - name: compass-quay-pull   # the fork image lives in a private Quay repository
 logVerbosity: 4
 args:
   filter: 'attributes["dra.net/rdma"].BoolValue == true && attributes["dra.net/ifName"].StringValue.startsWith("rdma_vf_")'

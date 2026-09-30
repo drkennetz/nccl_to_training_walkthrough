@@ -1,0 +1,90 @@
+{
+  "artifacts": {},
+  "experiment": "E3",
+  "image": {
+    "ref": "quay.io/x/y:compass-fixture"
+  },
+  "nccl": {
+    "network": "IB",
+    "path": "rdma_gdr",
+    "transport_counts": {
+      "mnnvl_channels": 0,
+      "net_ib_channels": 640,
+      "net_ib_gdr_channels": 640,
+      "net_socket_channels": 0,
+      "p2p_channels": 512,
+      "ranks_reporting": 8,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "train",
+      "t_end": 1100.0,
+      "t_start": 1000.0
+    }
+  ],
+  "run_id": "e3-g8-rdma",
+  "schema_version": "1.0",
+  "timestamps": {
+    "end": "2026-09-30T05:42:29Z",
+    "start": "2026-09-30T05:42:29Z"
+  },
+  "topology": {
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "tray-0",
+      "tray-1"
+    ],
+    "ranks_per_host": {
+      "tray-0": 4,
+      "tray-1": 4
+    }
+  },
+  "training": {
+    "batch_per_gpu": 8,
+    "block_size": 1024,
+    "comm_fraction": 0.24,
+    "ddp_bucket_cap_mb": 25,
+    "loss_first": 10.9,
+    "loss_last": 7.2,
+    "model": {
+      "n_embd": 768,
+      "n_layer": 12,
+      "n_params": 124000000
+    },
+    "nccl_kernel_s_per_step": 0.025180327868852458,
+    "samples_per_s": 610.0,
+    "step_s": {
+      "max": 0.13639344262295083,
+      "mean": 0.10491803278688525,
+      "min": 0.09442622950819672,
+      "p50": 0.10491803278688525,
+      "p90": 0.11540983606557378
+    },
+    "steps": 50,
+    "tokens_per_s": 624640.0
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 8,
+    "world_size": 8
+  },
+  "variant": {
+    "label": "",
+    "nccl_env": {},
+    "nnodes": 2,
+    "nproc_per_node": 4,
+    "rails": 4,
+    "repeat": 0,
+    "transport": "rdma",
+    "world_size": 8
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "580.65",
+    "nccl": "2.27.7",
+    "python": "3.12",
+    "torch": "2.8.0"
+  }
+}

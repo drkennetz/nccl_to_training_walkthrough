@@ -117,11 +117,44 @@ def pick_index(table: list[GidEntry], want_ndev: str | None = None, want_addr: s
     raise LookupError("no global RoCE v2 GID; table=" + json.dumps([e.to_dict() for e in table]))
 
 
-def list_hcas(prefix: str = "rdma_vf_rail", root: str = SYSFS_IB) -> list[str]:
+SYSFS_VERBS = "/sys/class/infiniband_verbs"
+
+
+def usable_hcas(verbs_root: str = SYSFS_VERBS, dev_root: str = "/dev/infiniband") -> set[str] | None:
+    """HCAs this process can open: the uverbs char device exists in /dev. In shared RDMA netns
+    mode sysfs lists EVERY host device, but a pod only gets the char devices of the ones it
+    claimed; NCCL can only use those. None when the verbs tree is absent (no filtering)."""
     try:
-        return sorted(h for h in os.listdir(root) if h.startswith(prefix))
+        entries = os.listdir(verbs_root)
+    except OSError:
+        return None
+    out = set()
+    for u in entries:
+        if not u.startswith("uverbs"):
+            continue
+        if not os.path.exists(os.path.join(dev_root, u)):
+            continue
+        try:
+            with open(os.path.join(verbs_root, u, "ibdev")) as f:
+                out.add(f.read().strip())
+        except OSError:
+            pass
+    return out
+
+
+def list_hcas(
+    prefix: str = "rdma_vf_rail", root: str = SYSFS_IB, usable: set[str] | None = None
+) -> list[str]:
+    """Rail HCAs visible in sysfs, restricted to the ones this pod can open (see usable_hcas)."""
+    try:
+        names = sorted(h for h in os.listdir(root) if h.startswith(prefix))
     except OSError:
         return []
+    if usable is None:
+        usable = usable_hcas()
+    if usable is not None:
+        names = [n for n in names if n in usable]
+    return names
 
 
 def discover(
@@ -155,9 +188,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--addr", help="prefer the GID equal to this IPv6 address")
     ap.add_argument("--root", default=SYSFS_IB)
     ap.add_argument("--export", action="store_true", help="print 'export NCCL_IB_GID_INDEX=<i>' only")
+    ap.add_argument(
+        "--list-hcas", action="store_true", help="print the usable rail HCAs, comma-separated, and exit"
+    )
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     hcas = a.hca or list_hcas(root=a.root)
+    if a.list_hcas:
+        print(",".join(hcas))
+        return 0 if hcas else 2
     if not hcas:
         print("no RDMA devices under " + a.root, file=sys.stderr)
         return 2

@@ -1,0 +1,73 @@
+# Probe: one pod per worker, each claiming ONE rail VF as an IPVLAN child. Proves, before any
+# benchmark runs, that (1) the VF and its RDMA device stay on the host, (2) the pod sees the RDMA
+# device and its char devices (shared RDMA netns mode), (3) the child gets a fabric address from
+# router advertisements, and (4) ibv_rc_pingpong carries traffic between the two pods.
+#   kubectl apply -f deploy/k8s/probe/probe-rails.yaml
+#   kubectl -n compass exec probe-rail-0 -- python -m bench gid
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: probe-one-rail
+  namespace: compass
+spec:
+  spec:
+    devices:
+      requests:
+        - name: rails
+          exactly:
+            deviceClassName: dra.net
+            allocationMode: ExactCount
+            count: 1
+            selectors:
+              - cel:
+                  expression: >-
+                    has(device.attributes["dra.net"].rdma) && device.attributes["dra.net"].rdma == true &&
+                    has(device.attributes["dra.net"].ifName) && device.attributes["dra.net"].ifName == "rdma_vf_rail0"
+      config:
+        - requests: [rails]
+          opaque:
+            driver: dra.net
+            parameters:
+              interface:
+                type: IPVLAN
+                addressing: Unnumbered
+                acceptRA: 1
+                ipvlan: {mode: L2, flag: Bridge}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: probe-rail-0
+  namespace: compass
+  labels: {app: probe-rail}
+spec:
+  restartPolicy: Never
+  nodeSelector: {kubernetes.io/hostname: gpu-3uwoq-6g3ya-1}   # a nodeSelector, not nodeName: DRA claims are allocated by the scheduler
+  imagePullSecrets: [{name: compass-quay-pull}]
+  resourceClaims:
+    - {name: rails, resourceClaimTemplateName: probe-one-rail}
+  containers:
+    - name: probe
+      image: quay.io/drkennetz/ktlo-labs:compass-dev0
+      command: ["sleep", "infinity"]
+      securityContext: {capabilities: {add: [IPC_LOCK]}}
+      resources: {claims: [{name: rails}], limits: {memory: 4Gi}}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: probe-rail-1
+  namespace: compass
+  labels: {app: probe-rail}
+spec:
+  restartPolicy: Never
+  nodeSelector: {kubernetes.io/hostname: gpu-3uwoq-6g3ya-2}   # a nodeSelector, not nodeName: DRA claims are allocated by the scheduler
+  imagePullSecrets: [{name: compass-quay-pull}]
+  resourceClaims:
+    - {name: rails, resourceClaimTemplateName: probe-one-rail}
+  containers:
+    - name: probe
+      image: quay.io/drkennetz/ktlo-labs:compass-dev0
+      command: ["sleep", "infinity"]
+      securityContext: {capabilities: {add: [IPC_LOCK]}}
+      resources: {claims: [{name: rails}], limits: {memory: 4Gi}}

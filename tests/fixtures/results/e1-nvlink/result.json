@@ -1,0 +1,401 @@
+{
+  "artifacts": {},
+  "experiment": "E1",
+  "image": {
+    "ref": "quay.io/x/y:compass-fixture"
+  },
+  "nccl": {
+    "network": "Socket",
+    "path": "nvlink",
+    "transport_counts": {
+      "mnnvl_channels": 256,
+      "net_ib_channels": 0,
+      "net_ib_gdr_channels": 0,
+      "net_socket_channels": 0,
+      "p2p_channels": 512,
+      "ranks_reporting": 8,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "timed-1MiB",
+      "t_end": 1002.0,
+      "t_start": 1000.0
+    },
+    {
+      "name": "timed-2MiB",
+      "t_end": 1005.0,
+      "t_start": 1003.0
+    },
+    {
+      "name": "timed-4MiB",
+      "t_end": 1008.0,
+      "t_start": 1006.0
+    },
+    {
+      "name": "timed-8MiB",
+      "t_end": 1011.0,
+      "t_start": 1009.0
+    },
+    {
+      "name": "timed-16MiB",
+      "t_end": 1014.0,
+      "t_start": 1012.0
+    },
+    {
+      "name": "timed-32MiB",
+      "t_end": 1017.0,
+      "t_start": 1015.0
+    },
+    {
+      "name": "timed-64MiB",
+      "t_end": 1020.0,
+      "t_start": 1018.0
+    },
+    {
+      "name": "timed-128MiB",
+      "t_end": 1023.0,
+      "t_start": 1021.0
+    },
+    {
+      "name": "timed-256MiB",
+      "t_end": 1026.0,
+      "t_start": 1024.0
+    },
+    {
+      "name": "timed-512MiB",
+      "t_end": 1029.0,
+      "t_start": 1027.0
+    },
+    {
+      "name": "timed-1GiB",
+      "t_end": 1032.0,
+      "t_start": 1030.0
+    },
+    {
+      "name": "timed-2GiB",
+      "t_end": 1035.0,
+      "t_start": 1033.0
+    },
+    {
+      "name": "timed-4GiB",
+      "t_end": 1038.0,
+      "t_start": 1036.0
+    },
+    {
+      "name": "timed-8GiB",
+      "t_end": 1041.0,
+      "t_start": 1039.0
+    }
+  ],
+  "run_id": "e1-nvlink",
+  "schema_version": "1.0",
+  "sweep": [
+    {
+      "algbw_GBs": 9.577,
+      "busbw_GBs": 16.76,
+      "bytes": 1048576,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011496355618011138,
+      "mean_s": 0.00010948910112391559,
+      "min_s": 0.00010620442809019813,
+      "p50_s": 0.00010948910112391559,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011277377415763306,
+        "rank_mean_min_s": 0.00010729931910143728,
+        "rank_mean_p50_s": 0.00010948910112391559,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 18.574,
+      "busbw_GBs": 32.504,
+      "bytes": 2097152,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011855336341883298,
+      "mean_s": 0.00011290796516079331,
+      "min_s": 0.00010952072620596951,
+      "p50_s": 0.00011290796516079331,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0001162952041156171,
+        "rank_mean_min_s": 0.00011064980585757744,
+        "rank_mean_p50_s": 0.00011290796516079331,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 36.814,
+      "busbw_GBs": 64.424,
+      "bytes": 4194304,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011962920420402861,
+      "mean_s": 0.00011393257543240819,
+      "min_s": 0.00011051459816943595,
+      "p50_s": 0.00011393257543240819,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011735055269538044,
+        "rank_mean_min_s": 0.00011165392392376002,
+        "rank_mean_p50_s": 0.00011393257543240819,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 66.017,
+      "busbw_GBs": 115.53,
+      "bytes": 8388608,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.000133420913583307,
+      "mean_s": 0.00012706753674600666,
+      "min_s": 0.00012325551064362646,
+      "p50_s": 0.00012706753674600666,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00013087956284838685,
+        "rank_mean_min_s": 0.00012452618601108652,
+        "rank_mean_p50_s": 0.00012706753674600666,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 118.827,
+      "busbw_GBs": 207.947,
+      "bytes": 16777216,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00014825015165482978,
+      "mean_s": 0.0001411906206236474,
+      "min_s": 0.00013695490200493798,
+      "p50_s": 0.0001411906206236474,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00014542633924235685,
+        "rank_mean_min_s": 0.00013836680821117445,
+        "rank_mean_p50_s": 0.0001411906206236474,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 188.185,
+      "busbw_GBs": 329.325,
+      "bytes": 33554432,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00018722039948994133,
+      "mean_s": 0.0001783051423713727,
+      "min_s": 0.0001729559881002315,
+      "p50_s": 0.0001783051423713727,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00018365429664251388,
+        "rank_mean_min_s": 0.00017473903952394524,
+        "rank_mean_p50_s": 0.0001783051423713727,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 263.833,
+      "busbw_GBs": 461.708,
+      "bytes": 67108864,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0002670792737879473,
+      "mean_s": 0.00025436121313137836,
+      "min_s": 0.000246730376737437,
+      "p50_s": 0.00025436121313137836,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0002619920495253197,
+        "rank_mean_min_s": 0.00024927398886875077,
+        "rank_mean_p50_s": 0.00025436121313137836,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 345.089,
+      "busbw_GBs": 603.906,
+      "bytes": 134217728,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00040838343880910825,
+      "mean_s": 0.0003889366083896269,
+      "min_s": 0.0003772685101379381,
+      "p50_s": 0.0003889366083896269,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0004006047066413157,
+        "rank_mean_min_s": 0.00038115787622183437,
+        "rank_mean_p50_s": 0.0003889366083896269,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 388.315,
+      "busbw_GBs": 679.551,
+      "bytes": 268435456,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0007258467169186126,
+      "mean_s": 0.0006912825875415358,
+      "min_s": 0.0006705441099152897,
+      "p50_s": 0.0006912825875415358,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0007120210651677819,
+        "rank_mean_min_s": 0.0006774569357907051,
+        "rank_mean_p50_s": 0.0006912825875415358,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 431.906,
+      "busbw_GBs": 755.836,
+      "bytes": 536870912,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.001305177822009043,
+      "mean_s": 0.0012430264971514695,
+      "min_s": 0.0012057357022369254,
+      "p50_s": 0.0012430264971514695,
+      "rank_variance": {
+        "rank_mean_max_s": 0.0012803172920660135,
+        "rank_mean_min_s": 0.00121816596720844,
+        "rank_mean_p50_s": 0.0012430264971514695,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 441.356,
+      "busbw_GBs": 772.374,
+      "bytes": 1073741824,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0025544634667144864,
+      "mean_s": 0.0024328223492518916,
+      "min_s": 0.002359837678774335,
+      "p50_s": 0.0024328223492518916,
+      "rank_variance": {
+        "rank_mean_max_s": 0.002505807019729448,
+        "rank_mean_min_s": 0.002384165902266854,
+        "rank_mean_p50_s": 0.0024328223492518916,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 452.044,
+      "busbw_GBs": 791.077,
+      "bytes": 2147483648,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.004988140160227542,
+      "mean_s": 0.004750609676407182,
+      "min_s": 0.004608091386114966,
+      "p50_s": 0.004750609676407182,
+      "rank_variance": {
+        "rank_mean_max_s": 0.004893127966699398,
+        "rank_mean_min_s": 0.004655597482879039,
+        "rank_mean_p50_s": 0.004750609676407182,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 466.669,
+      "busbw_GBs": 816.671,
+      "bytes": 4294967296,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.009663628738002304,
+      "mean_s": 0.009203455940954574,
+      "min_s": 0.008927352262725936,
+      "p50_s": 0.009203455940954574,
+      "rank_variance": {
+        "rank_mean_max_s": 0.009479559619183212,
+        "rank_mean_min_s": 0.009019386822135482,
+        "rank_mean_p50_s": 0.009203455940954574,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 480.77,
+      "busbw_GBs": 841.347,
+      "bytes": 8589934592,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.018760387901523883,
+      "mean_s": 0.017867036096689413,
+      "min_s": 0.01733102501378873,
+      "p50_s": 0.017867036096689413,
+      "rank_variance": {
+        "rank_mean_max_s": 0.018403047179590095,
+        "rank_mean_min_s": 0.017509695374755625,
+        "rank_mean_p50_s": 0.017867036096689413,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    }
+  ],
+  "timestamps": {
+    "end": "2026-09-30T05:42:28Z",
+    "start": "2026-09-30T05:42:28Z"
+  },
+  "topology": {
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "tray-0",
+      "tray-1"
+    ],
+    "ranks_per_host": {
+      "tray-0": 4,
+      "tray-1": 4
+    }
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 8,
+    "world_size": 8
+  },
+  "variant": {
+    "label": "",
+    "nccl_env": {
+      "NCCL_MNNVL_ENABLE": "1"
+    },
+    "nnodes": 2,
+    "nproc_per_node": 4,
+    "rails": 0,
+    "repeat": 0,
+    "transport": "nvlink",
+    "world_size": 8
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "580.65",
+    "nccl": "2.27.7",
+    "python": "3.12",
+    "torch": "2.8.0"
+  }
+}

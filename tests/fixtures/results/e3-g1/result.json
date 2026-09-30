@@ -1,0 +1,88 @@
+{
+  "artifacts": {},
+  "experiment": "E3",
+  "image": {
+    "ref": "quay.io/x/y:compass-fixture"
+  },
+  "nccl": {
+    "network": "Socket",
+    "path": "local",
+    "transport_counts": {
+      "mnnvl_channels": 0,
+      "net_ib_channels": 0,
+      "net_ib_gdr_channels": 0,
+      "net_socket_channels": 0,
+      "p2p_channels": 512,
+      "ranks_reporting": 1,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "train",
+      "t_end": 1100.0,
+      "t_start": 1000.0
+    }
+  ],
+  "run_id": "e3-g1",
+  "schema_version": "1.0",
+  "timestamps": {
+    "end": "2026-09-30T05:42:29Z",
+    "start": "2026-09-30T05:42:29Z"
+  },
+  "topology": {
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "tray-0"
+    ],
+    "ranks_per_host": {
+      "tray-0": 1
+    }
+  },
+  "training": {
+    "batch_per_gpu": 8,
+    "block_size": 1024,
+    "comm_fraction": 0.0,
+    "ddp_bucket_cap_mb": 25,
+    "loss_first": 10.9,
+    "loss_last": 7.2,
+    "model": {
+      "n_embd": 768,
+      "n_layer": 12,
+      "n_params": 124000000
+    },
+    "nccl_kernel_s_per_step": 0.0,
+    "samples_per_s": 100.0,
+    "step_s": {
+      "max": 0.10400000000000001,
+      "mean": 0.08,
+      "min": 0.07200000000000001,
+      "p50": 0.08,
+      "p90": 0.08800000000000001
+    },
+    "steps": 50,
+    "tokens_per_s": 102400.0
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 1,
+    "world_size": 1
+  },
+  "variant": {
+    "label": "",
+    "nccl_env": {},
+    "nnodes": 1,
+    "nproc_per_node": 1,
+    "rails": 0,
+    "repeat": 0,
+    "transport": "local",
+    "world_size": 1
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "580.65",
+    "nccl": "2.27.7",
+    "python": "3.12",
+    "torch": "2.8.0"
+  }
+}

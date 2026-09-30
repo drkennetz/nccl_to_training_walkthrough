@@ -1,0 +1,25 @@
+# The take-home cluster as a tenant of the shared Grafana Cloud stack. Copy to terraform.tfvars
+# (gitignored), fill the four connection values from the stack's Kubernetes-Monitoring page, and
+# apply in its own workspace:  terraform workspace new compass && terraform apply
+# The bootstrap token comes from TF_VAR_grafana_cloud_bootstrap_token (source scripts/creds.sh).
+grafana_cloud_stack_slug = "<stack-slug>"
+
+customer     = "compass"
+cluster_name = "compass-gb300"
+
+grafana_cloud_metrics_url      = "https://prometheus-prod-XX-prod-REGION.grafana.net./api/prom/push"
+grafana_cloud_metrics_username = "<metrics instance id>"
+grafana_cloud_logs_url         = "https://logs-prod-XXX.grafana.net./loki/api/v1/push"
+grafana_cloud_logs_username    = "<logs instance id>"
+
+kube_config_path = "~/.local/state/k8s-bootstrap/polite-possum/kubeconfig"
+
+# The trays run node-exporter (:9100) and the GPU/fabric exporters (:9400 DCGM, :9500 RDMA,
+# :9600 NVLink, :9700 PCIe) as HOST processes: scrape them directly, deploy no exporter.
+scrape_host_node_exporter = true
+scrape_host_gpu_exporters = true
+host_gpu_exporter_ports   = { dcgm = 9400, nvlink = 9600, pcie = 9700, rdma = 9500 }
+
+# Ship everything during the experiment window: the fabric dashboard needs the per-rail
+# node_infiniband_* throughput series and every DCGM profiling field.
+metrics_profile = "full"

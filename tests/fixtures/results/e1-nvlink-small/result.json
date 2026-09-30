@@ -1,0 +1,279 @@
+{
+  "artifacts": {},
+  "experiment": "E1",
+  "image": {
+    "ref": "quay.io/x/y:compass-fixture"
+  },
+  "nccl": {
+    "network": "Socket",
+    "path": "nvlink",
+    "transport_counts": {
+      "mnnvl_channels": 256,
+      "net_ib_channels": 0,
+      "net_ib_gdr_channels": 0,
+      "net_socket_channels": 0,
+      "p2p_channels": 512,
+      "ranks_reporting": 8,
+      "shm_channels": 0
+    }
+  },
+  "phases": [
+    {
+      "name": "timed-4KiB",
+      "t_end": 1002.0,
+      "t_start": 1000.0
+    },
+    {
+      "name": "timed-8KiB",
+      "t_end": 1005.0,
+      "t_start": 1003.0
+    },
+    {
+      "name": "timed-16KiB",
+      "t_end": 1008.0,
+      "t_start": 1006.0
+    },
+    {
+      "name": "timed-32KiB",
+      "t_end": 1011.0,
+      "t_start": 1009.0
+    },
+    {
+      "name": "timed-64KiB",
+      "t_end": 1014.0,
+      "t_start": 1012.0
+    },
+    {
+      "name": "timed-128KiB",
+      "t_end": 1017.0,
+      "t_start": 1015.0
+    },
+    {
+      "name": "timed-256KiB",
+      "t_end": 1020.0,
+      "t_start": 1018.0
+    },
+    {
+      "name": "timed-512KiB",
+      "t_end": 1023.0,
+      "t_start": 1021.0
+    },
+    {
+      "name": "timed-1MiB",
+      "t_end": 1026.0,
+      "t_start": 1024.0
+    }
+  ],
+  "run_id": "e1-nvlink-small",
+  "schema_version": "1.0",
+  "sweep": [
+    {
+      "algbw_GBs": 0.038,
+      "busbw_GBs": 0.067,
+      "bytes": 4096,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0001122958130603227,
+      "mean_s": 0.00010694839339078352,
+      "min_s": 0.00010373994158906002,
+      "p50_s": 0.00010694839339078352,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011015684519250703,
+        "rank_mean_min_s": 0.00010480942552296785,
+        "rank_mean_p50_s": 0.00010694839339078352,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 0.077,
+      "busbw_GBs": 0.135,
+      "bytes": 8192,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011112678636837269,
+      "mean_s": 0.00010583503463654541,
+      "min_s": 0.00010265998359744905,
+      "p50_s": 0.00010583503463654541,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00010901008567564178,
+        "rank_mean_min_s": 0.00010371833394381451,
+        "rank_mean_p50_s": 0.00010583503463654541,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 0.15,
+      "busbw_GBs": 0.263,
+      "bytes": 16384,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011446601175424519,
+      "mean_s": 0.00010901524928975732,
+      "min_s": 0.0001057447918110646,
+      "p50_s": 0.00010901524928975732,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011228570676845004,
+        "rank_mean_min_s": 0.00010683494430396217,
+        "rank_mean_p50_s": 0.00010901524928975732,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 0.3,
+      "busbw_GBs": 0.526,
+      "bytes": 32768,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011452575595763525,
+      "mean_s": 0.0001090721485310812,
+      "min_s": 0.00010579998407514876,
+      "p50_s": 0.0001090721485310812,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011234431298701363,
+        "rank_mean_min_s": 0.00010689070556045957,
+        "rank_mean_p50_s": 0.0001090721485310812,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 0.606,
+      "busbw_GBs": 1.06,
+      "bytes": 65536,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.0001135758381751228,
+      "mean_s": 0.00010816746492868837,
+      "min_s": 0.00010492244098082772,
+      "p50_s": 0.00010816746492868837,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011141248887654902,
+        "rank_mean_min_s": 0.0001060041156301146,
+        "rank_mean_p50_s": 0.00010816746492868837,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 1.245,
+      "busbw_GBs": 2.179,
+      "bytes": 131072,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011052088834742608,
+      "mean_s": 0.00010525798890231054,
+      "min_s": 0.00010210024923524123,
+      "p50_s": 0.00010525798890231054,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00010841572856937986,
+        "rank_mean_min_s": 0.00010315282912426433,
+        "rank_mean_p50_s": 0.00010525798890231054,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 2.447,
+      "busbw_GBs": 4.282,
+      "bytes": 262144,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011249607561026234,
+      "mean_s": 0.00010713911962882127,
+      "min_s": 0.00010392494603995664,
+      "p50_s": 0.00010713911962882127,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011035329321768591,
+        "rank_mean_min_s": 0.00010499633723624484,
+        "rank_mean_p50_s": 0.00010713911962882127,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 4.835,
+      "busbw_GBs": 8.461,
+      "bytes": 524288,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011385733207896775,
+      "mean_s": 0.00010843555436092166,
+      "min_s": 0.00010518248773009401,
+      "p50_s": 0.00010843555436092166,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011168862099174931,
+        "rank_mean_min_s": 0.00010626684327370323,
+        "rank_mean_p50_s": 0.00010843555436092166,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    },
+    {
+      "algbw_GBs": 9.729,
+      "busbw_GBs": 17.026,
+      "bytes": 1048576,
+      "correct": true,
+      "iters": 20,
+      "max_s": 0.00011316741855667604,
+      "mean_s": 0.00010777849386350098,
+      "min_s": 0.00010454513904759594,
+      "p50_s": 0.00010777849386350098,
+      "rank_variance": {
+        "rank_mean_max_s": 0.00011101184867940602,
+        "rank_mean_min_s": 0.00010562292398623096,
+        "rank_mean_p50_s": 0.00010777849386350098,
+        "slowest_rank": 3,
+        "spread_pct": 5.0
+      },
+      "warmup": 5
+    }
+  ],
+  "timestamps": {
+    "end": "2026-09-30T05:42:28Z",
+    "start": "2026-09-30T05:42:28Z"
+  },
+  "topology": {
+    "gpu": "NVIDIA GB300",
+    "hosts": [
+      "tray-0",
+      "tray-1"
+    ],
+    "ranks_per_host": {
+      "tray-0": 4,
+      "tray-1": 4
+    }
+  },
+  "validation": {
+    "all_ok": true,
+    "ranks_ok": 8,
+    "world_size": 8
+  },
+  "variant": {
+    "label": "small",
+    "nccl_env": {},
+    "nnodes": 2,
+    "nproc_per_node": 4,
+    "rails": 0,
+    "repeat": 0,
+    "transport": "nvlink",
+    "world_size": 8
+  },
+  "versions": {
+    "cuda": "13.0",
+    "driver": "580.65",
+    "nccl": "2.27.7",
+    "python": "3.12",
+    "torch": "2.8.0"
+  }
+}

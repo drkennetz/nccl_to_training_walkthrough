@@ -5,7 +5,7 @@ import pytest
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def fixtures() -> pathlib.Path:
     return FIXTURES
 
