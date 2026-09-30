@@ -18,7 +18,7 @@ The 30-minute deck is `slides/compass.pptx` (built from the results, never typed
 | `deploy/k8s/` | `matrix.yaml` (every run cell, the single source of truth) → `render.py` → `rendered/<run_id>/manifests.yaml` (committed, drift-checked in CI); `run_matrix.sh` (resumable runner), `collect.py`, the dranet values/DeviceClass, the one-rail probe |
 | `deploy/terraform/` | `onboard/` ships the cluster's host exporters to Grafana Cloud (Alloy, per-tenant token); `dashboards/` provisions `deploy/grafana/dashboards/compass-nccl-fabric.json` |
 | `analysis/` | `results/raw` → tables (`e4_before_after.csv` carries the Welch p-values), PNG charts, `SUMMARY.md`, the README block below |
-| `slides/` | `outline.yaml` (words) + `build_slides.py` (python-pptx) → `compass.pptx` |
+| `slides/` | `outline.yaml` (words + speaker notes) + `diagram.py` (the architecture drawing) + `build_slides.py` (python-pptx) → `compass.pptx` |
 | `infra/k8s_bootstrap/` | the cluster bring-up (git subtree) — see [docs/cluster-bootstrap.md](docs/cluster-bootstrap.md) |
 | `docs/` | [findings.md](docs/findings.md) (evidence → diagnosis → the optimization), [demo.md](docs/demo.md) (30-minute runbook with timings and talking points), [cluster-bootstrap.md](docs/cluster-bootstrap.md), [gid-discovery.md](docs/gid-discovery.md) |
 | `tests/` | pytest, no GPU, torch never imported: bandwidth math, size/iteration schedule, NCCL transport-log parser, GID table logic on a fake sysfs, schema, manifest renderer, watcher parsers, counter rates, analysis tables and charts, deck |

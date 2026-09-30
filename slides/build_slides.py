@@ -76,16 +76,43 @@ def add_table(
             cell.text_frame.paragraphs[0].font.size = Pt(font)
 
 
+def add_notes(slide, notes: list[str] | str | None):
+    if not notes:
+        return
+    text = notes if isinstance(notes, str) else "\n\n".join(notes)
+    slide.notes_slide.notes_text_frame.text = text
+
+
 def add_section(prs, sec: dict, results_dir: str):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     _title(s, sec["title"])
+    add_notes(s, sec.get("notes"))
     chart = sec.get("chart")
     chart_path = os.path.join(results_dir, "charts", f"{chart}.png") if chart else None
+    if sec.get("image"):  # a repo-relative picture (e.g. the architecture diagram)
+        img = (
+            sec["image"]
+            if os.path.isabs(sec["image"])
+            else os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), sec["image"])
+        )
+        if os.path.exists(img):
+            chart_path, chart = img, os.path.basename(img)
     have_chart = bool(chart_path and os.path.exists(chart_path))
     table = sec.get("table")
     table_path = os.path.join(results_dir, "tables", f"{table}.csv") if table else None
     df = pd.read_csv(table_path) if table_path and os.path.exists(table_path) else None
     bullets = sec.get("bullets", [])
+    if sec.get("image") and have_chart and df is None:
+        # a full-width diagram: the picture is the slide, the bullets go to the speaker notes
+        pic = s.shapes.add_picture(chart_path, Inches(0.6), Inches(1.15), width=Inches(12.1))
+        max_h = Inches(6.1)
+        if pic.height > max_h:  # keep the diagram inside the 7.5 in slide, centred
+            ratio = max_h / pic.height
+            pic.height, pic.width = int(pic.height * ratio), int(pic.width * ratio)
+            pic.left = int((prs.slide_width - pic.width) / 2)
+        if bullets:
+            add_notes(s, ["ON THE SLIDE (say these):"] + bullets + [""] + (sec.get("notes") or []))
+        return s
     if have_chart:
         s.shapes.add_picture(chart_path, Inches(0.5), Inches(1.3), width=Inches(7.6))
         if bullets:
