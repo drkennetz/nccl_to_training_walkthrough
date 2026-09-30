@@ -37,6 +37,11 @@
   "counters_e5-algo-ring": "results/charts/counters_e5-algo-ring.png",
   "counters_e5-buffsize16m": "results/charts/counters_e5-buffsize16m.png",
   "counters_e5-buffsize4m": "results/charts/counters_e5-buffsize4m.png",
+  "counters_e5-counters-gdr-off": "results/charts/counters_e5-counters-gdr-off.png",
+  "counters_e5-counters-nvlink": "results/charts/counters_e5-counters-nvlink.png",
+  "counters_e5-counters-rails1": "results/charts/counters_e5-counters-rails1.png",
+  "counters_e5-counters-rdma-qps4": "results/charts/counters_e5-counters-rdma-qps4.png",
+  "counters_e5-counters-rdma": "results/charts/counters_e5-counters-rdma.png",
   "counters_e5-ddp-bucket200": "results/charts/counters_e5-ddp-bucket200.png",
   "counters_e5-gdr-off": "results/charts/counters_e5-gdr-off.png",
   "counters_e5-sock-nthreads4": "results/charts/counters_e5-sock-nthreads4.png"

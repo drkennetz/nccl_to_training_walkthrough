@@ -1,0 +1,2 @@
+run_id,gpus,transport,bucket_cap_mb,samples_per_s,comm_fraction,baseline_samples_per_s,delta_pct
+e5-ddp-bucket200,8,rdma,200,2768.7645,0.3239,2090.0110,32.4761

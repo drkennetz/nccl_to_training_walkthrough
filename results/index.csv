@@ -32,6 +32,11 @@ e5-algo-nvls,E5,nvlink,0,8,2,unknown,0,0,0,True,2026-09-30T07:08:39Z,2026-09-30T
 e5-algo-ring,E5,nvlink,0,8,2,nvlink,0,256,0,True,2026-09-30T07:10:05Z,2026-09-30T07:10:06Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
 e5-buffsize16m,E5,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T07:03:24Z,2026-09-30T07:03:25Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
 e5-buffsize4m,E5,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T07:04:53Z,2026-09-30T07:04:54Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e5-counters-gdr-off,E5,rdma,4,8,2,rdma,0,0,256,True,2026-09-30T07:17:39Z,2026-09-30T07:17:40Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e5-counters-nvlink,E5,nvlink,0,8,2,nvlink,0,256,0,True,2026-09-30T07:19:07Z,2026-09-30T07:19:08Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e5-counters-rails1,E5,rdma,1,8,2,rdma_gdr,0,0,256,True,2026-09-30T07:20:47Z,2026-09-30T07:20:48Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e5-counters-rdma-qps4,E5,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T07:22:24Z,2026-09-30T07:22:25Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e5-counters-rdma,E5,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T07:24:02Z,2026-09-30T07:24:02Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
 e5-ddp-bucket200,E5,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T07:14:41Z,2026-09-30T07:14:42Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
 e5-gdr-off,E5,rdma,4,8,2,rdma,0,0,640,True,2026-09-30T07:06:22Z,2026-09-30T07:06:23Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
 e5-sock-nthreads4,E5,tcp,0,8,2,tcp,256,0,0,True,2026-09-30T07:12:52Z,2026-09-30T07:12:52Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest

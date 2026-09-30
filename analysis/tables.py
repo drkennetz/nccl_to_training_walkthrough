@@ -39,9 +39,18 @@ def e2_table(df: pd.DataFrame) -> pd.DataFrame:
     return t
 
 
-def e3_scaling(tr: pd.DataFrame) -> pd.DataFrame:
+def e3_scaling(tr: pd.DataFrame, include_e5: bool = False) -> pd.DataFrame:
+    """Scaling table; efficiency is relative to the E3 single-GPU run. include_e5 keeps the E5 DDP
+    variants (bucket size) as extra rows for the chart."""
     if tr.empty:
         return tr
+    if "experiment" in tr.columns and include_e5:
+        base = tr[(tr.experiment == "E3") & (tr.gpus == 1)]["samples_per_s"]
+        t = tr[tr.experiment.isin(["E3", "E5"])].sort_values(["gpus", "transport", "experiment"]).copy()
+        b = float(base.iloc[0]) if len(base) else float("nan")
+        t["speedup"] = t["samples_per_s"] / b
+        t["efficiency"] = t["speedup"] / t["gpus"]
+        return t
     t = (
         tr[tr.experiment == "E3"].sort_values(["gpus", "transport"]).copy()
         if "experiment" in tr.columns
@@ -137,6 +146,54 @@ def e5_training_table(tr: pd.DataFrame) -> pd.DataFrame:
                 "comm_fraction": r.comm_fraction,
                 "baseline_samples_per_s": base,
                 "delta_pct": 100.0 * (r.samples_per_s / base - 1.0) if base == base else float("nan"),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def counters_table(results: list[dict]) -> pd.DataFrame:
+    """The counter-window runs (label 'counters'): what the rails, NVLink and PCIe did during the
+    timed phase — the evidence behind the bandwidth numbers. Reads counters.per-phase.csv."""
+    rows = []
+    for r in results:
+        if r["variant"].get("label") != "counters":
+            continue
+        p = os.path.join(r["_dir"], "counters.per-phase.csv")
+        if not os.path.exists(p):
+            continue
+        s = pd.read_csv(p)
+        h = s[s.phase.str.startswith("timed-")]
+        if h.empty:
+            continue
+
+        def m(metric, col="rate_per_s", agg="sum", _h=h):
+            v = _h[_h.metric == metric][col]
+            return float(getattr(v, agg)()) if len(v) else float("nan")
+
+        sweep = r["sweep"][0] if r.get("sweep") else {}
+        rows.append(
+            {
+                "run_id": r["run_id"],
+                "transport": r["variant"]["transport"],
+                "rails": r["variant"]["rails"],
+                "qps": int(r["variant"]["nccl_env"].get("NCCL_IB_QPS_PER_CONNECTION", "1")),
+                "gdr": r["variant"]["nccl_env"].get("NCCL_NET_GDR_LEVEL", "default"),
+                "algbw_GBs": sweep.get("algbw_GBs", float("nan")),
+                "busbw_GBs": sweep.get("busbw_GBs", float("nan")),
+                "rail_xmit_Gbps_total": m("port_xmit_data", "gbps"),
+                "rail_xmit_Gbps_max_per_rail": m("port_xmit_data", "gbps", "max"),
+                "rail_rcv_Gbps_total": m("port_rcv_data", "gbps"),
+                "xmit_wait_per_s": m("port_xmit_wait"),
+                "out_of_sequence_per_s": m("out_of_sequence"),
+                "packet_seq_err_per_s": m("packet_seq_err"),
+                "ack_timeout_per_s": m("local_ack_timeout_err"),
+                "cnp_sent_per_s": m("np_cnp_sent"),
+                "cnp_handled_per_s": m("rp_cnp_handled"),
+                "ecn_marked_per_s": m("np_ecn_marked_roce_packets"),
+                "nvlink_tx_GBps_total": m("nvlink_tx_bytes") / 1e9,
+                "pcie_tx_GBps_total": m("pcie_tx_bytes") / 1e9,
+                "pcie_rx_GBps_total": m("pcie_rx_bytes") / 1e9,
+                "sm_active_mean": m("sm_active", agg="mean"),
             }
         )
     return pd.DataFrame(rows)

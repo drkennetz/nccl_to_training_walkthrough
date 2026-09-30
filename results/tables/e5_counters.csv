@@ -1,0 +1,6 @@
+run_id,transport,rails,qps,gdr,algbw_GBs,busbw_GBs,rail_xmit_Gbps_total,rail_xmit_Gbps_max_per_rail,rail_rcv_Gbps_total,xmit_wait_per_s,out_of_sequence_per_s,packet_seq_err_per_s,ack_timeout_per_s,cnp_sent_per_s,cnp_handled_per_s,ecn_marked_per_s,nvlink_tx_GBps_total,pcie_tx_GBps_total,pcie_rx_GBps_total,sm_active_mean
+e5-counters-gdr-off,rdma,4,1,0,144.7730,253.3520,1136.9501,284.2764,1136.9457,0.0000,0.0555,0.0000,0.0000,,,,0.0000,0.0010,0.0011,0.0000
+e5-counters-nvlink,nvlink,0,1,default,475.7580,832.5760,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,,,,387.1300,0.0009,0.0010,0.0000
+e5-counters-rails1,rdma,1,1,SYS,50.1930,87.8370,408.4703,408.4703,409.4942,0.0000,0.0000,0.0000,0.0000,,,,0.0000,3.1430,3.2017,0.0087
+e5-counters-rdma-qps4,rdma,4,4,SYS,172.2830,301.4950,1350.5040,337.6600,1354.7360,0.0000,0.0000,0.0000,0.0000,,,,0.0000,5.1021,6.1655,0.0053
+e5-counters-rdma,rdma,4,1,SYS,234.5190,410.4090,1815.9202,454.1378,1820.4619,0.0000,0.0000,0.0000,0.0000,,,,0.0000,0.0009,0.0010,0.0000

@@ -51,6 +51,11 @@ def build_summary(
         ),
         ("e5_sensitivity", "E5 — sensitivity appendix (bus bandwidth GB/s)", None),
         ("e5_ddp_bucket", "E5 — DDP bucket size on the RDMA path (communication frequency)", None),
+        (
+            "e5_counters",
+            "Counter windows — what the rails, NVLink and PCIe did during a sustained 4 GiB all-reduce",
+            None,
+        ),
     ]
     for key, title, chart in sections:
         lines += [f"## {title}", ""]

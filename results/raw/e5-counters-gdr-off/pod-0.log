@@ -1,0 +1,62 @@
+=== e5-counters-gdr-off node_rank=0 on gpu-3uwoq-6g3ya-1 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  rdma_vf_rail2@if30 UNKNOWN        fe80::2d7:7600:1f0:b9f1/64 
+  rdma_vf_rail3@if31 UNKNOWN        fe80::2c8:8500:135:d06e/64 
+  rdma_vf_rail0@if28 UNKNOWN        fe80::2f1:b200:195:d2ec/64 
+  rdma_vf_rail1@if29 UNKNOWN        fe80::205:9d00:123:eae0/64 
+  eth0@if249       UP             10.42.1.219/32 fe80::a010:3aff:fe69:6bf5/64 
+  rdma_vf_rail2@if30 UNKNOWN        fdcd:8300:a3af:70ed:2d7:7600:1f0:b9f1/64 
+  rdma_vf_rail3@if31 UNKNOWN        fdcd:8300:a4af:70ed:2c8:8500:135:d06e/64 
+  rdma_vf_rail0@if28 UNKNOWN        fdcd:8300:a1af:70ed:2f1:b200:195:d2ec/64 
+  rdma_vf_rail1@if29 UNKNOWN        fdcd:8300:a2af:70ed:205:9d00:123:eae0/64 
+rdma_vf_rail0:
+  [4] fe80:0000:0000:0000:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        link-local
+  [5] fe80:0000:0000:0000:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        link-local
+  [6] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        global
+  [7] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        global <-- chosen
+rdma_vf_rail1:
+  [4] fe80:0000:0000:0000:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        link-local
+  [5] fe80:0000:0000:0000:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        link-local
+  [6] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        global
+  [7] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        global <-- chosen
+rdma_vf_rail2:
+  [4] fe80:0000:0000:0000:02d7:7600:01f0:b9f1  IB/RoCE v1   rdma_vf_rail2        link-local
+  [5] fe80:0000:0000:0000:02d7:7600:01f0:b9f1  RoCE v2      rdma_vf_rail2        link-local
+  [6] fdcd:8300:a3af:70ed:02d7:7600:01f0:b9f1  IB/RoCE v1   rdma_vf_rail2        global
+  [7] fdcd:8300:a3af:70ed:02d7:7600:01f0:b9f1  RoCE v2      rdma_vf_rail2        global <-- chosen
+rdma_vf_rail3:
+  [4] fe80:0000:0000:0000:02c8:8500:0135:d06e  IB/RoCE v1   rdma_vf_rail3        link-local
+  [5] fe80:0000:0000:0000:02c8:8500:0135:d06e  RoCE v2      rdma_vf_rail3        link-local
+  [6] fdcd:8300:a4af:70ed:02c8:8500:0135:d06e  IB/RoCE v1   rdma_vf_rail3        global
+  [7] fdcd:8300:a4af:70ed:02c8:8500:0135:d06e  RoCE v2      rdma_vf_rail3        global <-- chosen
+NCCL_IB_GID_INDEX=7  consistent=True
+NCCL_IB_HCA==rdma_vf_rail0,rdma_vf_rail1,rdma_vf_rail2,rdma_vf_rail3 NCCL_IB_GID_INDEX=7
+W0930 07:17:00.664000 1 torch/distributed/run.py:766] 
+W0930 07:17:00.664000 1 torch/distributed/run.py:766] *****************************************
+W0930 07:17:00.664000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 07:17:00.664000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790752647.2299738}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790752648.0369165}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790752648.0374286}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790752656.9385228}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 300, "mean_s": 0.029667, "algbw_GBs": 144.773, "busbw_GBs": 253.352, "spread_pct": 0.01, "slowest_rank": 1, "correct": true}
+RANK1 host=gpu-3uwoq-6g3ya-1 local_rank=1 done
+RANK0 host=gpu-3uwoq-6g3ya-1 local_rank=0 done
+RANK2 host=gpu-3uwoq-6g3ya-1 local_rank=2 done
+RANK3 host=gpu-3uwoq-6g3ya-1 local_rank=3 done
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 256, "net_ib_gdr_channels": 0, "net_socket_channels": 0, "p2p_channels": 448, "shm_channels": 0, "ranks_reporting": 8, "path": "rdma", "network": "IBext_v10", "mnnvl": "0"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e5-counters-gdr-off/result.json

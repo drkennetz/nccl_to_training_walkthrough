@@ -3,5 +3,10 @@ e5-algo-nvls,296.5960,695.1170,829.5910
 e5-algo-ring,326.8840,634.8070,679.4460
 e5-buffsize16m,101.3360,419.9700,392.7340
 e5-buffsize4m,101.6840,402.3750,419.3290
+e5-counters-gdr-off,,,253.3520
+e5-counters-nvlink,,,832.5760
+e5-counters-rails1,,,87.8370
+e5-counters-rdma,,,410.4090
+e5-counters-rdma-qps4,,,301.4950
 e5-gdr-off,107.0210,222.3760,247.4570
 e5-sock-nthreads4,10.2810,21.6040,29.4190

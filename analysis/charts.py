@@ -112,8 +112,9 @@ def small_message_latency(df: pd.DataFrame, out: str) -> str:
 
 def rails_vs_busbw(df: pd.DataFrame, out: str) -> str:
     d = df[(df.transport == "rdma") & (df.experiment.isin(["E1", "E2"])) & (df.label != "small")]
-    sizes = sorted(d["bytes"].unique())
     rails = sorted(d["rails"].unique())
+    # only the sizes every rail count ran, so the bars compare like with like
+    sizes = sorted(set.intersection(*(set(d[d.rails == r]["bytes"]) for r in rails))) if rails else []
     fig, ax = plt.subplots(figsize=(8, 4.5))
     w = 0.8 / max(1, len(rails))
     for i, r in enumerate(rails):

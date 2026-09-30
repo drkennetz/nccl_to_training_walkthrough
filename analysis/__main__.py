@@ -77,6 +77,8 @@ def main(argv=None) -> int:
                 )
         except Exception as e:  # noqa: BLE001
             print(f"warning: counters for {r['run_id']}: {e}", file=sys.stderr)
+    frames["e5_counters"] = tables.counters_table(results)
+    tables.write_tables({"e5_counters": frames["e5_counters"]}, os.path.join(out, "tables"))
     text = summary.build_summary(frames, ch, os.path.join(out, "SUMMARY.md"), idx)
     summary.update_readme(text, a.readme)
     with open(os.path.join(out, "charts.json"), "w") as f:

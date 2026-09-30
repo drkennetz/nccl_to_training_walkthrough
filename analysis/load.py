@@ -66,6 +66,7 @@ def to_training_frame(results: list[dict]) -> pd.DataFrame:
         rows.append(
             {
                 "run_id": r["run_id"],
+                "experiment": r["experiment"],
                 "transport": r["variant"]["transport"],
                 "gpus": r["variant"]["world_size"],
                 "nodes": r["variant"]["nnodes"],

@@ -99,3 +99,14 @@
 2026-09-30T07:13:42Z run  e5-ddp-bucket200
 2026-09-30T07:14:50Z done e5-ddp-bucket200 in 68s: PERF {"world": 8, "samples_per_s": 2768.76, "step_s": 0.0231, "comm_fraction": 0.324, "loss_first": 10.833297729492188, "loss_last": 10.841232299804688}
 2026-09-30T07:15:31Z matrix pass complete: 36 result(s)
+2026-09-30T07:16:52Z run  e5-counters-gdr-off
+2026-09-30T07:17:46Z done e5-counters-gdr-off in 54s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 300, "mean_s": 0.029667, "algbw_GBs": 144.773, "busbw_GBs": 253.352, "spread_pct": 0.01, "slowest_rank": 1, 
+2026-09-30T07:18:27Z run  e5-counters-nvlink
+2026-09-30T07:19:15Z done e5-counters-nvlink in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 600, "mean_s": 0.009028, "algbw_GBs": 475.758, "busbw_GBs": 832.576, "spread_pct": 0.01, "slowest_rank": 1, 
+2026-09-30T07:19:56Z run  e5-counters-rails1
+2026-09-30T07:20:54Z done e5-counters-rails1 in 58s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 150, "mean_s": 0.08557, "algbw_GBs": 50.193, "busbw_GBs": 87.837, "spread_pct": 0.0, "slowest_rank": 1, "cor
+2026-09-30T07:21:35Z run  e5-counters-rdma-qps4
+2026-09-30T07:22:34Z done e5-counters-rdma-qps4 in 59s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 400, "mean_s": 0.02493, "algbw_GBs": 172.283, "busbw_GBs": 301.495, "spread_pct": 0.0, "slowest_rank": 1, "c
+2026-09-30T07:23:15Z run  e5-counters-rdma
+2026-09-30T07:24:08Z done e5-counters-rdma in 53s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 500, "mean_s": 0.018314, "algbw_GBs": 234.519, "busbw_GBs": 410.409, "spread_pct": 0.0, "slowest_rank": 4, "
+2026-09-30T07:24:49Z matrix pass complete: 41 result(s)
