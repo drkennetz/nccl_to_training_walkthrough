@@ -1,0 +1,130 @@
+# {{ cell.run_id }} — {{ cell.experiment }} {{ cell.entrypoint }} over {{ cell.transport }} ({{ cell.nnodes }} pod(s) x {{ cell.nproc }} rank(s), rails={{ cell.rails }})
+# Rendered from deploy/k8s/matrix.yaml by render.py; do not edit by hand.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ cell.job_name }}
+  namespace: {{ d.namespace }}
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "{{ cell.run_id }}"}
+spec:
+  clusterIP: None
+  selector: {app: {{ cell.job_name }}}
+  ports:
+    - {name: rendezvous, port: {{ d.master_port }}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ cell.job_name }}
+  namespace: {{ d.namespace }}
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "{{ cell.run_id }}", compass/experiment: "{{ cell.experiment }}"}
+spec:
+  completions: {{ cell.nnodes }}
+  parallelism: {{ cell.nnodes }}
+  completionMode: Indexed
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ d.timeout_s }}
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {app: {{ cell.job_name }}, app.kubernetes.io/part-of: compass, compass/run-id: "{{ cell.run_id }}"}
+{%- if cell.imex %}
+      annotations:
+        # The multi-node NVLink channel; needs runtimeClassName nvidia (the CDI annotation
+        # allow-list lives on that runtime table).
+        cdi.k8s.io/imex: "nvidia.com/imex-channel=all"
+{%- endif %}
+    spec:
+      restartPolicy: Never
+      subdomain: {{ cell.job_name }}
+      runtimeClassName: nvidia
+      nodeSelector:
+{%- for k, v in d.node_selector.items() %}
+        {{ k }}: {{ v }}
+{%- endfor %}
+{%- if d.image_pull_secret %}
+      imagePullSecrets:
+        - name: {{ d.image_pull_secret }}
+{%- endif %}
+      resourceClaims:
+        - name: gpus
+          resourceClaimTemplateName: {{ cell.job_name }}-gpus
+{%- if cell.rails > 0 %}
+        - name: rails
+          resourceClaimTemplateName: {{ cell.job_name }}-rails
+{%- endif %}
+{%- if cell.nnodes > 1 %}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app: {{ cell.job_name }}}
+              topologyKey: kubernetes.io/hostname
+{%- endif %}
+      volumes:
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: {{ d.shm_gi }}Gi}
+        - name: results
+          hostPath: {path: {{ d.results_host_path }}, type: DirectoryOrCreate}
+      containers:
+        - name: bench
+          image: {{ d.image }}
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities: {add: [IPC_LOCK]}   # pin RDMA memory (ibv_reg_mr) without privilege
+          resources:
+            claims:
+              - name: gpus
+{%- if cell.rails > 0 %}
+              - name: rails
+{%- endif %}
+            limits: {memory: {{ cell.mem_limit_gi }}Gi}
+          volumeMounts:
+            - {name: shm, mountPath: /dev/shm}
+            - {name: results, mountPath: /results}
+          env:
+            - name: NODE_RANK
+              valueFrom: {fieldRef: {fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"}}
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+            - {name: NNODES, value: "{{ cell.nnodes }}"}
+            - {name: NPROC_PER_NODE, value: "{{ cell.nproc }}"}
+            - {name: MASTER_ADDR, value: {{ cell.job_name }}-0.{{ cell.job_name }}}
+            - {name: MASTER_PORT, value: "{{ d.master_port }}"}
+            - {name: RUN_ID, value: "{{ cell.run_id }}"}
+            - {name: REPEAT, value: "{{ cell.repeat }}"}
+            - {name: IMAGE_REF, value: "{{ d.image }}"}
+            - {name: RESULTS_DIR, value: /results}
+            - {name: EXPECT_HCAS, value: "{{ cell.rails }}"}
+            - {name: VARIANT_JSON, value: {{ cell.variant_json | tojson }}}
+{%- for k, v in cell.env.items() %}
+            - {name: {{ k }}, value: "{{ v }}"}
+{%- endfor %}
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -o pipefail
+              echo "=== ${RUN_ID} node_rank=${NODE_RANK} on ${NODE_NAME} ==="
+              echo "GPUs visible : $(nvidia-smi -L | grep -c '^GPU')"
+              echo "IMEX channels: $(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null | tr '\n' ' ')"
+              echo "RDMA devices : $(ls /sys/class/infiniband/ 2>/dev/null | tr '\n' ' ')"
+              echo "interfaces   :"; ip -br addr | sed 's/^/  /'
+              vis=$(nvidia-smi -L | grep -c '^GPU')
+              [ "$vis" -eq "${NPROC_PER_NODE}" ] || { echo "PRECHECK-FAILED: claim yielded ${vis} GPU(s), expected ${NPROC_PER_NODE}"; exit 3; }
+{%- if cell.imex %}
+              [ -n "$(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null)" ] || { echo "PRECHECK-FAILED: no IMEX channel in the container"; exit 3; }
+{%- endif %}
+{%- if cell.rails > 0 %}
+              n=$(ls /sys/class/infiniband/ 2>/dev/null | grep -c '^rdma_vf_rail')
+              [ "$n" -eq "${EXPECT_HCAS}" ] || { echo "PRECHECK-FAILED: ${n} rdma_vf_rail* device(s) visible, expected ${EXPECT_HCAS}"; exit 3; }
+              # Which rails did the claim give us? Restrict NCCL to exactly those.
+              export NCCL_IB_HCA="=$(ls /sys/class/infiniband/ | grep '^rdma_vf_rail' | paste -sd,)"
+              # The RoCE v2 GID index is DISCOVERED from the GID table, never assumed (see bench/gid.py).
+              python -m bench gid || true
+              eval "$(python -m bench gid --export)" || { echo "PRECHECK-FAILED: no consistent RoCE v2 GID index"; exit 3; }
+              echo "NCCL_IB_HCA=${NCCL_IB_HCA} NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX}"
+{%- endif %}
+              python -m bench sysinfo > /results/${RUN_ID}.sysinfo.${NODE_RANK}.json 2>/dev/null || true
+              exec torchrun --nnodes=${NNODES} --nproc_per_node=${NPROC_PER_NODE} --node_rank=${NODE_RANK} \
+                --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+                -m bench {{ cell.entrypoint }} --run-id "${RUN_ID}" --repeat "${REPEAT}" --experiment {{ cell.experiment }} {{ cell.args | join(' ') }}

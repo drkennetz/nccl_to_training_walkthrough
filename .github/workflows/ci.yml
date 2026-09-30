@@ -1,0 +1,124 @@
+# CI: lint, unit tests, manifest drift check, Terraform validation, an analysis smoke run on
+# fixtures, then the arm64 image to ghcr.io (required) mirrored to quay.io. Actions are pinned
+# by commit SHA.
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/compass_takehome
+  QUAY_IMAGE: quay.io/drkennetz/ktlo-labs
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: "3.12"}
+      - run: pip install -q -e '.[dev]'
+      - run: ruff check . && ruff format --check .
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - run: terraform fmt -check -recursive deploy/terraform
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: "3.12"}
+      - run: pip install -q -e '.[dev]'
+      - run: pytest -q --cov=bench --cov=analysis --cov-report=term --junitxml=junit.xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with: {name: junit, path: junit.xml}
+
+  render-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: "3.12"}
+      - run: pip install -q -e '.[dev]'
+      - run: python deploy/k8s/render.py --check
+      - name: kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          # resource.k8s.io/v1 (DRA) schemas are not in the upstream catalog yet: structure is still checked.
+          ./kubeconform -strict -ignore-missing-schemas -summary deploy/k8s/rendered/*/manifests.yaml deploy/k8s/deviceclass-dranet.yaml
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+      - run: |
+          for d in deploy/terraform/onboard deploy/terraform/dashboards; do
+            (cd "$d" && terraform init -backend=false -input=false >/dev/null && terraform validate)
+          done
+      - run: python3 -c "import json,glob,sys; uids=[json.load(open(f))['uid'] for f in glob.glob('deploy/grafana/dashboards/*.json')]; assert len(uids)==len(set(uids)), uids; print(uids)"
+
+  analysis-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: "3.12"}
+      - run: pip install -q -e '.[dev]'
+      - run: python -m analysis tests/fixtures/results --out /tmp/an
+      - run: python -m slides --results /tmp/an --out /tmp/an/compass.pptx
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: analysis-smoke, path: /tmp/an}
+
+  image:
+    # linux/arm64: the trays are Grace (aarch64); build natively on the arm64 runner.
+    runs-on: ubuntu-24.04-arm
+    needs: [lint, test, render-check]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Log in to ghcr.io
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to quay.io (mirror)
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@06fb636fac595d6fb4b28a5dfcb21a6f5091859c # v4.5.0
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+      - id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: |
+            ${{ env.GHCR_IMAGE }}
+            ${{ env.QUAY_IMAGE }},enable=${{ github.event_name != 'pull_request' }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+          flavor: |
+            prefix=compass-,onlatest=true
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/arm64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=compass
+          cache-to: type=gha,mode=max,scope=compass
+      - run: echo "published ${{ steps.meta.outputs.tags }}" | tr ' ' '\n' >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,124 @@
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: compass-e5-algo-ring-gpus
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e5-algo-ring"}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpus
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            allocationMode: ExactCount
+            count: 4
+
+---
+# e5-algo-ring — E5 allreduce over nvlink (2 pod(s) x 4 rank(s), rails=0)
+# Rendered from deploy/k8s/matrix.yaml by render.py; do not edit by hand.
+apiVersion: v1
+kind: Service
+metadata:
+  name: compass-e5-algo-ring
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e5-algo-ring"}
+spec:
+  clusterIP: None
+  selector: {app: compass-e5-algo-ring}
+  ports:
+    - {name: rendezvous, port: 29500}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: compass-e5-algo-ring
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e5-algo-ring", compass/experiment: "E5"}
+spec:
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed
+  backoffLimit: 0
+  activeDeadlineSeconds: 1500
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {app: compass-e5-algo-ring, app.kubernetes.io/part-of: compass, compass/run-id: "e5-algo-ring"}
+      annotations:
+        # The multi-node NVLink channel; needs runtimeClassName nvidia (the CDI annotation
+        # allow-list lives on that runtime table).
+        cdi.k8s.io/imex: "nvidia.com/imex-channel=all"
+    spec:
+      restartPolicy: Never
+      subdomain: compass-e5-algo-ring
+      runtimeClassName: nvidia
+      nodeSelector:
+        k8s-bootstrap.io/role: worker
+      imagePullSecrets:
+        - name: compass-quay-pull
+      resourceClaims:
+        - name: gpus
+          resourceClaimTemplateName: compass-e5-algo-ring-gpus
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app: compass-e5-algo-ring}
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 32Gi}
+        - name: results
+          hostPath: {path: /mnt/localdisk/compass-results, type: DirectoryOrCreate}
+      containers:
+        - name: bench
+          image: quay.io/drkennetz/ktlo-labs:compass-latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities: {add: [IPC_LOCK]}   # pin RDMA memory (ibv_reg_mr) without privilege
+          resources:
+            claims:
+              - name: gpus
+            limits: {memory: 64Gi}
+          volumeMounts:
+            - {name: shm, mountPath: /dev/shm}
+            - {name: results, mountPath: /results}
+          env:
+            - name: NODE_RANK
+              valueFrom: {fieldRef: {fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"}}
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+            - {name: NNODES, value: "2"}
+            - {name: NPROC_PER_NODE, value: "4"}
+            - {name: MASTER_ADDR, value: compass-e5-algo-ring-0.compass-e5-algo-ring}
+            - {name: MASTER_PORT, value: "29500"}
+            - {name: RUN_ID, value: "e5-algo-ring"}
+            - {name: REPEAT, value: "0"}
+            - {name: IMAGE_REF, value: "quay.io/drkennetz/ktlo-labs:compass-latest"}
+            - {name: RESULTS_DIR, value: /results}
+            - {name: EXPECT_HCAS, value: "0"}
+            - {name: VARIANT_JSON, value: "{\"label\": \"\", \"rails\": 0, \"transport\": \"nvlink\"}"}
+            - {name: NCCL_DEBUG, value: "INFO"}
+            - {name: NCCL_DEBUG_SUBSYS, value: "INIT,GRAPH,NET"}
+            - {name: NCCL_CUMEM_ENABLE, value: "1"}
+            - {name: NCCL_SOCKET_IFNAME, value: "eth0"}
+            - {name: NCCL_MNNVL_ENABLE, value: "1"}
+            - {name: NCCL_NVLS_ENABLE, value: "1"}
+            - {name: NCCL_ALGO, value: "Ring"}
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -o pipefail
+              echo "=== ${RUN_ID} node_rank=${NODE_RANK} on ${NODE_NAME} ==="
+              echo "GPUs visible : $(nvidia-smi -L | grep -c '^GPU')"
+              echo "IMEX channels: $(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null | tr '\n' ' ')"
+              echo "RDMA devices : $(ls /sys/class/infiniband/ 2>/dev/null | tr '\n' ' ')"
+              echo "interfaces   :"; ip -br addr | sed 's/^/  /'
+              vis=$(nvidia-smi -L | grep -c '^GPU')
+              [ "$vis" -eq "${NPROC_PER_NODE}" ] || { echo "PRECHECK-FAILED: claim yielded ${vis} GPU(s), expected ${NPROC_PER_NODE}"; exit 3; }
+              [ -n "$(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null)" ] || { echo "PRECHECK-FAILED: no IMEX channel in the container"; exit 3; }
+              python -m bench sysinfo > /results/${RUN_ID}.sysinfo.${NODE_RANK}.json 2>/dev/null || true
+              exec torchrun --nnodes=${NNODES} --nproc_per_node=${NPROC_PER_NODE} --node_rank=${NODE_RANK} \
+                --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+                -m bench allreduce --run-id "${RUN_ID}" --repeat "${REPEAT}" --experiment E5 --sizes 16Mi,512Mi,4Gi

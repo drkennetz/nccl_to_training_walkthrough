@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compass-bench"
+version = "0.1.0"
+description = "Distributed NCCL/PyTorch benchmark harness: all-reduce sweep, DDP scaling, counters, one optimization"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+dependencies = ["jsonschema>=4"]
+
+[project.optional-dependencies]
+# torch comes from the NGC base image; it is never installed by pip here.
+analysis = ["pandas>=2", "matplotlib>=3.8", "scipy>=1.11", "python-pptx>=0.6.23", "pyyaml>=6", "jinja2>=3"]
+dev = ["pytest>=8", "pytest-cov", "ruff>=0.5", "pandas>=2", "matplotlib>=3.8", "scipy>=1.11", "python-pptx>=0.6.23", "pyyaml>=6", "jinja2>=3"]
+
+[tool.setuptools.packages.find]
+include = ["bench*", "analysis*", "slides*"]
+
+[tool.setuptools.package-data]
+bench = ["schema/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["infra", "deploy/k8s/rendered"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]

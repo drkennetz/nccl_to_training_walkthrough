@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+junit.xml
+# terraform: state and live variables never leave the operator's machine
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+# run-time scratch
+results/raw/**/nccl_debug/
+*.tmp

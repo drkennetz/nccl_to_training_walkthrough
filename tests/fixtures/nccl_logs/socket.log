@@ -1,0 +1,8 @@
+pod-0:123:123 [0] NCCL INFO NCCL version 2.27.5+cuda13.0
+pod-0:123:123 [0] NCCL INFO NET/Socket : Using [0]eth0:10.42.1.17<0>
+pod-0:123:123 [0] NCCL INFO Using network Socket
+pod-0:123:123 [0] NCCL INFO MNNVL 0 nRanks 8
+pod-0:123:123 [0] NCCL INFO Channel 00/0 : 0[0] -> 1[1] via P2P/CUMEM
+pod-0:123:123 [0] NCCL INFO Channel 00/0 : 3[3] -> 4[0] [send] via NET/Socket/0
+pod-0:123:123 [0] NCCL INFO Channel 01/0 : 3[3] -> 4[0] [send] via NET/Socket/0
+pod-0:123:123 [0] NCCL INFO Connected all trees

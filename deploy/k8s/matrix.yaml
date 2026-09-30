@@ -1,0 +1,73 @@
+# The experiment matrix: the single source of truth for every run cell. render.py expands it
+# into deploy/k8s/rendered/<run_id>/manifests.yaml (committed; CI fails if stale).
+#
+# Every cell runs on the POD network (no hostNetwork anywhere): rendezvous through the headless
+# Service, NCCL's bootstrap over eth0, and the data path chosen by the transport block below.
+defaults:
+  namespace: compass
+  image: quay.io/drkennetz/ktlo-labs:compass-latest      # pinned by digest by run_matrix.sh --image
+  image_pull_secret: compass-quay-pull
+  gpu_device_class: gpu.nvidia.com
+  nic_device_class: dra.net
+  nproc_per_node: 4
+  shm_gi: 32
+  master_port: 29500
+  node_selector: {k8s-bootstrap.io/role: worker}
+  results_host_path: /mnt/localdisk/compass-results       # index-0 pod writes here; collect.py copies it
+  timeout_s: 1500
+  common_env:
+    NCCL_DEBUG: INFO
+    NCCL_DEBUG_SUBSYS: INIT,GRAPH,NET
+    NCCL_CUMEM_ENABLE: "1"
+    NCCL_SOCKET_IFNAME: eth0            # OOB/bootstrap; the data path is decided per transport
+
+transports:
+  nvlink:                                  # multi-node NVLink (MNNVL) through the IMEX channel
+    imex: true
+    rails: 0
+    env: {NCCL_MNNVL_ENABLE: "1", NCCL_NVLS_ENABLE: "1"}
+  rdma:                                    # the four rails, RoCE v2, GPUDirect; MNNVL off so NCCL must use NET
+    imex: false
+    rails: 4
+    env: {NCCL_MNNVL_ENABLE: "0", NCCL_IB_HCA: "rdma_vf_rail", NCCL_NET_GDR_C2C: "1", NCCL_NET_GDR_LEVEL: "SYS"}
+    # NCCL_IB_GID_INDEX is discovered in the pod by `python -m bench gid --export` (never assumed).
+    # NCCL_P2P_NET_CHUNKSIZE must stay unset on this path (recorded: zero bytes on the wire when set).
+  tcp:                                     # sockets over the pod overlay (Cilium geneve on the management NIC)
+    imex: false
+    rails: 0
+    env: {NCCL_MNNVL_ENABLE: "0", NCCL_IB_DISABLE: "1", NCCL_SOCKET_IFNAME: eth0}
+  tcp-rail:                                # sockets over ONE rail's IPVLAN child: Ethernet vs RoCE on the same wire
+    imex: false
+    rails: 1
+    env: {NCCL_MNNVL_ENABLE: "0", NCCL_IB_DISABLE: "1", NCCL_SOCKET_IFNAME: net0}
+
+experiments:
+  # E1 — all-reduce message-size sweep per transport (8 ranks = 2 trays x 4 GPUs)
+  - {id: e1-nvlink,  experiment: E1, entrypoint: allreduce, transport: nvlink,   nnodes: 2, args: [--sizes, "1Mi:8Gi"]}
+  - {id: e1-rdma,    experiment: E1, entrypoint: allreduce, transport: rdma,     nnodes: 2, args: [--sizes, "1Mi:8Gi"]}
+  - {id: e1-tcp,     experiment: E1, entrypoint: allreduce, transport: tcp,      nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"]}
+  - {id: e1-tcprail, experiment: E1, entrypoint: allreduce, transport: tcp-rail, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"]}
+  - {id: e1-nvlink-small, experiment: E1, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "4Ki:1Mi", --iters, "200", --warmup, "50"], label: small}
+  - {id: e1-rdma-small,   experiment: E1, entrypoint: allreduce, transport: rdma,   nnodes: 2, args: [--sizes, "4Ki:1Mi", --iters, "200", --warmup, "50"], label: small}
+  # E2 — rail count 1 / 2 / 4 (rails=4 is e1-rdma at the same three sizes)
+  - {id: e2-rails1, experiment: E2, entrypoint: allreduce, transport: rdma, rails: 1, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"]}
+  - {id: e2-rails2, experiment: E2, entrypoint: allreduce, transport: rdma, rails: 2, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"]}
+  - {id: e2-rails4, experiment: E2, entrypoint: allreduce, transport: rdma, rails: 4, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"]}
+  # E3 — the DDP workload at 1, 2, 4 GPUs (one tray) and 8 GPUs (two trays) over NVLink and over RDMA
+  - {id: e3-g1,        experiment: E3, entrypoint: ddp, transport: nvlink, nnodes: 1, nproc_per_node: 1, gpus: 1, imex: false}
+  - {id: e3-g2,        experiment: E3, entrypoint: ddp, transport: nvlink, nnodes: 1, nproc_per_node: 2, gpus: 2, imex: false}
+  - {id: e3-g4,        experiment: E3, entrypoint: ddp, transport: nvlink, nnodes: 1, nproc_per_node: 4, gpus: 4, imex: false}
+  - {id: e3-g8-nvlink, experiment: E3, entrypoint: ddp, transport: nvlink, nnodes: 2}
+  - {id: e3-g8-rdma,   experiment: E3, entrypoint: ddp, transport: rdma,   nnodes: 2}
+  # E4 — THE optimization: queue pairs per connection on the RDMA path, 5 repeats each
+  - {id: e4-qps1, experiment: E4, entrypoint: allreduce, transport: rdma, nnodes: 2, repeats: 5, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_IB_QPS_PER_CONNECTION: "1"}}
+  - {id: e4-qps2, experiment: E4, entrypoint: allreduce, transport: rdma, nnodes: 2, repeats: 5, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_IB_QPS_PER_CONNECTION: "2", NCCL_IB_SPLIT_DATA_ON_QPS: "1"}}
+  - {id: e4-qps4, experiment: E4, entrypoint: allreduce, transport: rdma, nnodes: 2, repeats: 5, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_IB_QPS_PER_CONNECTION: "4", NCCL_IB_SPLIT_DATA_ON_QPS: "1"}}
+  # E5 — sensitivity appendix
+  - {id: e5-buffsize4m,  experiment: E5, entrypoint: allreduce, transport: rdma,   nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_BUFFSIZE: "4194304"}}
+  - {id: e5-buffsize16m, experiment: E5, entrypoint: allreduce, transport: rdma,   nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_BUFFSIZE: "16777216"}}
+  - {id: e5-gdr-off,     experiment: E5, entrypoint: allreduce, transport: rdma,   nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_NET_GDR_LEVEL: "0", NCCL_NET_GDR_C2C: "0"}}
+  - {id: e5-algo-ring,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_ALGO: Ring}}
+  - {id: e5-algo-tree,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_ALGO: Tree}}
+  - {id: e5-algo-nvls,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_ALGO: NVLS}}
+  - {id: e5-sock-nthreads4, experiment: E5, entrypoint: allreduce, transport: tcp, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_SOCKET_NTHREADS: "4", NCCL_NSOCKS_PERTHREAD: "4"}}

@@ -1,0 +1,77 @@
+# Per-customer onboarding. Copy to terraform.tfvars (gitignored) and fill in, OR
+# pass -var / TF_VAR_* on the command line. Apply once per customer, ideally in
+# its own workspace:  terraform workspace new <customer> && terraform apply
+#
+# The push token is MINTED by Terraform — you do NOT paste one here.
+
+# --- Bootstrap (same for every customer; export as TF_VAR_ to avoid repeating) ---
+grafana_cloud_bootstrap_token = "glc_xxxxxxxxxxxxxxxxxxxxxxxx"   # SECRET: accesspolicies:read/write + stacks:read
+grafana_cloud_stack_slug      = "myorg"                          # the <slug> in https://<slug>.grafana.net
+# grafana_cloud_region        = "prod-us-east-0"                 # optional; empty derives from the stack
+
+# --- This customer ---
+customer     = "acme"
+cluster_name = "acme-prod-1"
+
+# --- Push destinations (from the stack's Kubernetes-Monitoring connection details) ---
+grafana_cloud_metrics_url      = "https://prometheus-prod-XX-prod-REGION.grafana.net./api/prom/push"
+grafana_cloud_metrics_username = "1234567"
+grafana_cloud_logs_url         = "https://logs-prod-XXX.grafana.net./loki/api/v1/push"
+grafana_cloud_logs_username    = "2345678"
+
+# --- Target cluster ---
+# kube_config_path = "~/.kube/config"
+# kube_context     = "acme-prod-1"
+
+# --- Cluster shape (match the customer's cluster — nothing is assumed) ---
+# If the cluster ALREADY runs a Node Exporter (e.g. kube-prometheus-stack on port
+# 9100), reuse it — otherwise the collector's own collides on 9100:
+# reuse_existing_node_exporter          = true
+# existing_node_exporter_namespace      = "monitoring"
+# existing_node_exporter_label_selector = { "app.kubernetes.io/name" = "prometheus-node-exporter" }
+#
+# If Node Exporter runs on the nodes as a HOST process (systemd unit on :9100, not a pod),
+# deploy none and scrape the host one directly (mutually exclusive with the block above):
+# scrape_host_node_exporter = true
+# host_node_exporter_port   = 9100
+# ...and the four host GPU/fabric exporters (DCGM :9400, NVLink :9600, PCIe :9700, RDMA :9500)
+# with their gpu-health keep-lists (README "Host GPU exporters"):
+# scrape_host_gpu_exporters = true
+# host_gpu_exporter_ports   = { dcgm = 9400, nvlink = 9600, pcie = 9700, rdma = 9500 }
+# extra_host_exporters      = { other = { port = 9800, job = "integrations/other", keep = ["other_.*"] } }
+#
+# If the cluster runs ANOTHER monitoring stack, exclude its ServiceMonitors so
+# series aren't double-shipped (empty default scrapes everything, incl. KTLO's):
+# service_monitor_part_of_excludes = ["kube-prometheus-stack", "kube-state-metrics", "prometheus-node-exporter"]
+#
+# Exclude noisy ServiceMonitors that carry NO part-of label (a bundled Grafana, a
+# cloud metrics exporter). NotIn keeps label-less monitors, so this only drops ones
+# that actually have the named label — GPU/RDMA exporters are untouched:
+# service_monitor_exclude_labels = [
+#   { key = "app.kubernetes.io/name", values = ["grafana", "oci-metrics-exporter"] },
+#   { key = "app",                    values = ["gpu-operator"] },
+# ]
+#
+# enable_windows_exporter = false   # only if the cluster has Windows nodes
+# enable_kepler           = false   # per-node energy metrics (adds ~700 series/node); off by default
+
+# --- What ships to Grafana Cloud (cardinality / bill) ------------------------
+# "gpu-health" (default) ships only GPU + GPU-agnostic HARDWARE-health series
+# (thermal/power/fan, RDMA/InfiniBand, NIC, disk, ECC, CPU thermal-throttle) plus
+# KTLO's own ktlo_* and the GPU exporter's amd_gpu_* — enough to stay under free-tier
+# 15k active-series cap. "full" ships everything the chart scrapes (bigger bill).
+# metrics_profile = "gpu-health"
+#
+# Add metrics back on top of the gpu-health keep-list (regex ok), e.g. to restore
+# host CPU-utilisation panels:
+# extra_keep_node_metrics = ["node_cpu_seconds_total"]
+#
+# Under gpu-health the collector also DROPS unused high-cardinality amd_gpu_*
+# families the AMD device-metrics-exporter emits but KTLO doesn't chart (JPEG/VCN
+# media engines, min/max clock, per-block ECC — ~1.1k series/8-GPU node). To shed
+# still more ServiceMonitor-scraped series, add names/regexes here:
+# service_monitor_exclude_metrics = ["amd_gpu_xgmi_.*"]
+
+# --- Optional extras (each auto-adds its required scope to the minted token) ---
+# enable_opencost         = true   # + needs the query URL; adds metrics:read scope
+# enable_fleet_management = true    # + set the two fleet vars; adds fleet-management scope

@@ -1,0 +1,28 @@
+# One counter watcher per worker: sysfs RDMA counters (visible in shared RDMA netns mode) and the
+# host DCGM exporter, sampled at 1 Hz to stdout. Pod network, unprivileged, /sys read-only.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: compass-watcher-{{ node_short }}
+  namespace: {{ d.namespace }}
+  labels: {app.kubernetes.io/part-of: compass, app: compass-watcher}
+spec:
+  restartPolicy: Never
+  nodeName: {{ node }}
+{%- if d.image_pull_secret %}
+  imagePullSecrets:
+    - name: {{ d.image_pull_secret }}
+{%- endif %}
+  volumes:
+    - name: sys
+      hostPath: {path: /sys, type: Directory}
+  containers:
+    - name: watcher
+      image: {{ d.image }}
+      imagePullPolicy: IfNotPresent
+      args: [watcher, --interval, "1", --ib-root, /host-sys/class/infiniband, --dcgm-url, "http://{{ node_ip }}:9400/metrics"]
+      env:
+        - {name: NODE_NAME, value: {{ node }}}
+      volumeMounts:
+        - {name: sys, mountPath: /host-sys, readOnly: true}
+      resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}

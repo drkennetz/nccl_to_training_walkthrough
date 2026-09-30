@@ -1,0 +1,34 @@
+# The dranet claim. IPVLAN keeps the rail VF on the host and gives the pod a child interface;
+# in the host's SHARED RDMA netns mode the RDMA device is visible too and the driver injects
+# its /dev/infiniband char devices. acceptRA=1 lets the kernel autoconfigure the child from the
+# fabric's router advertisements (the fork's driver-side SLAAC wait exists for passthrough only).
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: {{ cell.job_name }}-rails
+  namespace: {{ d.namespace }}
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "{{ cell.run_id }}"}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: rails
+          exactly:
+            deviceClassName: {{ d.nic_device_class }}
+            allocationMode: ExactCount
+            count: {{ cell.rails }}
+            selectors:
+              - cel:
+                  expression: >-
+                    has(device.attributes["dra.net"].rdma) && device.attributes["dra.net"].rdma == true &&
+                    has(device.attributes["dra.net"].ifName) && device.attributes["dra.net"].ifName.startsWith("rdma_vf_rail")
+      config:
+        - requests: [rails]
+          opaque:
+            driver: dra.net
+            parameters:
+              interface:
+                type: IPVLAN
+                addressing: Unnumbered
+                acceptRA: 1
+                ipvlan: {mode: L2, flag: Bridge}

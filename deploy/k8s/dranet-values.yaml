@@ -1,0 +1,16 @@
+# dranet (fork dkennetzoracle/dranet@slaac-addressing) as this benchmark runs it.
+# Publishes only the RDMA-capable rail VFs; pods take IPVLAN children of them (the VF itself
+# never leaves the host, so a site health check that inventories the rails stays green) and
+# reach the RDMA device through the host's *shared* RDMA netns mode, which k8s_bootstrap sets on
+# each worker before k3s exists (RDMA_NETNS_MODE in the cluster env). The driver logs the mode
+# it detected at start-up.
+image:
+  repository: quay.io/drkennetz/ktlo-labs
+  tag: dranet-slaac-c70a33c
+logVerbosity: 4
+args:
+  filter: 'attributes["dra.net/rdma"].BoolValue == true && attributes["dra.net/ifName"].StringValue.startsWith("rdma_vf_")'
+kubeletRootDir: /var/lib/kubelet
+tolerations:
+  - operator: Exists
+    effect: NoSchedule

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/drkennetz/compass_takehome/bench/schema/result.schema.json",
+  "title": "compass benchmark result",
+  "type": "object",
+  "required": ["schema_version", "run_id", "experiment", "variant", "image", "versions", "topology", "nccl", "phases", "validation", "timestamps"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "run_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "experiment": {"enum": ["E1", "E2", "E3", "E4", "E5", "probe"]},
+    "variant": {
+      "type": "object",
+      "required": ["transport", "rails", "world_size", "nnodes", "nproc_per_node", "repeat", "nccl_env"],
+      "properties": {
+        "transport": {"enum": ["nvlink", "rdma", "tcp", "tcp-rail", "local"]},
+        "rails": {"type": "integer", "minimum": 0, "maximum": 8},
+        "world_size": {"type": "integer", "minimum": 1},
+        "nnodes": {"type": "integer", "minimum": 1},
+        "nproc_per_node": {"type": "integer", "minimum": 1},
+        "repeat": {"type": "integer", "minimum": 0},
+        "nccl_env": {"type": "object", "additionalProperties": {"type": "string"}},
+        "label": {"type": "string"}
+      }
+    },
+    "image": {"type": "object", "required": ["ref"], "properties": {"ref": {"type": "string"}, "digest": {"type": "string"}}},
+    "versions": {"type": "object", "required": ["torch", "cuda", "nccl", "driver", "python"], "additionalProperties": {"type": "string"}},
+    "topology": {
+      "type": "object",
+      "required": ["hosts", "ranks_per_host", "gpu"],
+      "properties": {
+        "hosts": {"type": "array", "items": {"type": "string"}},
+        "ranks_per_host": {"type": "object", "additionalProperties": {"type": "integer"}},
+        "gpu": {"type": "string"},
+        "nvidia_smi_topo": {"type": "string"},
+        "ibdev2netdev": {"type": "string"},
+        "rdma_link": {"type": "string"},
+        "gid_table": {"type": "object"},
+        "numa": {"type": "object"},
+        "pod_interfaces": {"type": "string"}
+      }
+    },
+    "nccl": {
+      "type": "object",
+      "required": ["network", "transport_counts", "path"],
+      "properties": {
+        "selected_ib_hca": {"type": "string"},
+        "socket_ifname": {"type": "string"},
+        "gid_index": {"type": ["integer", "null"]},
+        "network": {"type": "string"},
+        "mnnvl": {"type": "string"},
+        "path": {"enum": ["nvlink", "rdma_gdr", "rdma", "tcp", "unknown", "local"]},
+        "transport_counts": {
+          "type": "object",
+          "required": ["mnnvl_channels", "net_ib_channels", "net_ib_gdr_channels", "net_socket_channels", "p2p_channels", "shm_channels", "ranks_reporting"],
+          "properties": {
+            "mnnvl_channels": {"type": "integer"}, "net_ib_channels": {"type": "integer"},
+            "net_ib_gdr_channels": {"type": "integer"}, "net_socket_channels": {"type": "integer"},
+            "p2p_channels": {"type": "integer"}, "shm_channels": {"type": "integer"},
+            "ranks_reporting": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "sweep": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["bytes", "iters", "warmup", "mean_s", "p50_s", "min_s", "max_s", "algbw_GBs", "busbw_GBs", "rank_variance", "correct"],
+        "properties": {
+          "bytes": {"type": "integer"}, "iters": {"type": "integer"}, "warmup": {"type": "integer"},
+          "mean_s": {"type": "number"}, "p50_s": {"type": "number"}, "min_s": {"type": "number"}, "max_s": {"type": "number"},
+          "algbw_GBs": {"type": "number"}, "busbw_GBs": {"type": "number"}, "correct": {"type": "boolean"},
+          "rank_variance": {
+            "type": "object",
+            "required": ["rank_mean_min_s", "rank_mean_max_s", "rank_mean_p50_s", "spread_pct", "slowest_rank"]
+          }
+        }
+      }
+    },
+    "training": {
+      "type": "object",
+      "required": ["model", "batch_per_gpu", "block_size", "steps", "samples_per_s", "step_s", "comm_fraction", "nccl_kernel_s_per_step", "ddp_bucket_cap_mb"],
+      "properties": {
+        "model": {"type": "object"}, "batch_per_gpu": {"type": "integer"}, "block_size": {"type": "integer"},
+        "steps": {"type": "integer"}, "samples_per_s": {"type": "number"},
+        "step_s": {"type": "object", "required": ["mean", "p50", "p90", "min", "max"]},
+        "comm_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+        "nccl_kernel_s_per_step": {"type": "number"}, "ddp_bucket_cap_mb": {"type": "integer"},
+        "top_kernels": {"type": "array"}, "tokens_per_s": {"type": "number"}, "loss_first": {"type": "number"}, "loss_last": {"type": "number"}
+      }
+    },
+    "phases": {"type": "array", "items": {"type": "object", "required": ["name", "t_start", "t_end"]}},
+    "validation": {"type": "object", "required": ["all_ok", "ranks_ok", "world_size"]},
+    "artifacts": {"type": "object"},
+    "timestamps": {"type": "object", "required": ["start", "end"], "properties": {"start": {"type": "string"}, "end": {"type": "string"}}}
+  },
+  "oneOf": [{"required": ["sweep"], "not": {"required": ["training"]}}, {"required": ["training"], "not": {"required": ["sweep"]}}]
+}

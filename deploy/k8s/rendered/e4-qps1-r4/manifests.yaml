@@ -1,0 +1,168 @@
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: compass-e4-qps1-r4-gpus
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e4-qps1-r4"}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpus
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            allocationMode: ExactCount
+            count: 4
+
+---
+# The dranet claim. IPVLAN keeps the rail VF on the host and gives the pod a child interface;
+# in the host's SHARED RDMA netns mode the RDMA device is visible too and the driver injects
+# its /dev/infiniband char devices. acceptRA=1 lets the kernel autoconfigure the child from the
+# fabric's router advertisements (the fork's driver-side SLAAC wait exists for passthrough only).
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: compass-e4-qps1-r4-rails
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e4-qps1-r4"}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: rails
+          exactly:
+            deviceClassName: dra.net
+            allocationMode: ExactCount
+            count: 4
+            selectors:
+              - cel:
+                  expression: >-
+                    has(device.attributes["dra.net"].rdma) && device.attributes["dra.net"].rdma == true &&
+                    has(device.attributes["dra.net"].ifName) && device.attributes["dra.net"].ifName.startsWith("rdma_vf_rail")
+      config:
+        - requests: [rails]
+          opaque:
+            driver: dra.net
+            parameters:
+              interface:
+                type: IPVLAN
+                addressing: Unnumbered
+                acceptRA: 1
+                ipvlan: {mode: L2, flag: Bridge}
+
+---
+# e4-qps1-r4 — E4 allreduce over rdma (2 pod(s) x 4 rank(s), rails=4)
+# Rendered from deploy/k8s/matrix.yaml by render.py; do not edit by hand.
+apiVersion: v1
+kind: Service
+metadata:
+  name: compass-e4-qps1-r4
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e4-qps1-r4"}
+spec:
+  clusterIP: None
+  selector: {app: compass-e4-qps1-r4}
+  ports:
+    - {name: rendezvous, port: 29500}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: compass-e4-qps1-r4
+  namespace: compass
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "e4-qps1-r4", compass/experiment: "E4"}
+spec:
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed
+  backoffLimit: 0
+  activeDeadlineSeconds: 1500
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: {app: compass-e4-qps1-r4, app.kubernetes.io/part-of: compass, compass/run-id: "e4-qps1-r4"}
+    spec:
+      restartPolicy: Never
+      subdomain: compass-e4-qps1-r4
+      runtimeClassName: nvidia
+      nodeSelector:
+        k8s-bootstrap.io/role: worker
+      imagePullSecrets:
+        - name: compass-quay-pull
+      resourceClaims:
+        - name: gpus
+          resourceClaimTemplateName: compass-e4-qps1-r4-gpus
+        - name: rails
+          resourceClaimTemplateName: compass-e4-qps1-r4-rails
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app: compass-e4-qps1-r4}
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 32Gi}
+        - name: results
+          hostPath: {path: /mnt/localdisk/compass-results, type: DirectoryOrCreate}
+      containers:
+        - name: bench
+          image: quay.io/drkennetz/ktlo-labs:compass-latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            capabilities: {add: [IPC_LOCK]}   # pin RDMA memory (ibv_reg_mr) without privilege
+          resources:
+            claims:
+              - name: gpus
+              - name: rails
+            limits: {memory: 64Gi}
+          volumeMounts:
+            - {name: shm, mountPath: /dev/shm}
+            - {name: results, mountPath: /results}
+          env:
+            - name: NODE_RANK
+              valueFrom: {fieldRef: {fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"}}
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+            - {name: NNODES, value: "2"}
+            - {name: NPROC_PER_NODE, value: "4"}
+            - {name: MASTER_ADDR, value: compass-e4-qps1-r4-0.compass-e4-qps1-r4}
+            - {name: MASTER_PORT, value: "29500"}
+            - {name: RUN_ID, value: "e4-qps1-r4"}
+            - {name: REPEAT, value: "4"}
+            - {name: IMAGE_REF, value: "quay.io/drkennetz/ktlo-labs:compass-latest"}
+            - {name: RESULTS_DIR, value: /results}
+            - {name: EXPECT_HCAS, value: "4"}
+            - {name: VARIANT_JSON, value: "{\"label\": \"\", \"rails\": 4, \"transport\": \"rdma\"}"}
+            - {name: NCCL_DEBUG, value: "INFO"}
+            - {name: NCCL_DEBUG_SUBSYS, value: "INIT,GRAPH,NET"}
+            - {name: NCCL_CUMEM_ENABLE, value: "1"}
+            - {name: NCCL_SOCKET_IFNAME, value: "eth0"}
+            - {name: NCCL_MNNVL_ENABLE, value: "0"}
+            - {name: NCCL_IB_HCA, value: "rdma_vf_rail"}
+            - {name: NCCL_NET_GDR_C2C, value: "1"}
+            - {name: NCCL_NET_GDR_LEVEL, value: "SYS"}
+            - {name: NCCL_IB_QPS_PER_CONNECTION, value: "1"}
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -o pipefail
+              echo "=== ${RUN_ID} node_rank=${NODE_RANK} on ${NODE_NAME} ==="
+              echo "GPUs visible : $(nvidia-smi -L | grep -c '^GPU')"
+              echo "IMEX channels: $(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null | tr '\n' ' ')"
+              echo "RDMA devices : $(ls /sys/class/infiniband/ 2>/dev/null | tr '\n' ' ')"
+              echo "interfaces   :"; ip -br addr | sed 's/^/  /'
+              vis=$(nvidia-smi -L | grep -c '^GPU')
+              [ "$vis" -eq "${NPROC_PER_NODE}" ] || { echo "PRECHECK-FAILED: claim yielded ${vis} GPU(s), expected ${NPROC_PER_NODE}"; exit 3; }
+              n=$(ls /sys/class/infiniband/ 2>/dev/null | grep -c '^rdma_vf_rail')
+              [ "$n" -eq "${EXPECT_HCAS}" ] || { echo "PRECHECK-FAILED: ${n} rdma_vf_rail* device(s) visible, expected ${EXPECT_HCAS}"; exit 3; }
+              # Which rails did the claim give us? Restrict NCCL to exactly those.
+              export NCCL_IB_HCA="=$(ls /sys/class/infiniband/ | grep '^rdma_vf_rail' | paste -sd,)"
+              # The RoCE v2 GID index is DISCOVERED from the GID table, never assumed (see bench/gid.py).
+              python -m bench gid || true
+              eval "$(python -m bench gid --export)" || { echo "PRECHECK-FAILED: no consistent RoCE v2 GID index"; exit 3; }
+              echo "NCCL_IB_HCA=${NCCL_IB_HCA} NCCL_IB_GID_INDEX=${NCCL_IB_GID_INDEX}"
+              python -m bench sysinfo > /results/${RUN_ID}.sysinfo.${NODE_RANK}.json 2>/dev/null || true
+              exec torchrun --nnodes=${NNODES} --nproc_per_node=${NPROC_PER_NODE} --node_rank=${NODE_RANK} \
+                --master_addr=${MASTER_ADDR} --master_port=${MASTER_PORT} \
+                -m bench allreduce --run-id "${RUN_ID}" --repeat "${REPEAT}" --experiment E4 --sizes 16Mi,512Mi,4Gi

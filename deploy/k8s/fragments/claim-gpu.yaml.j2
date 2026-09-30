@@ -1,0 +1,15 @@
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: {{ cell.job_name }}-gpus
+  namespace: {{ d.namespace }}
+  labels: {app.kubernetes.io/part-of: compass, compass/run-id: "{{ cell.run_id }}"}
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpus
+          exactly:
+            deviceClassName: {{ d.gpu_device_class }}
+            allocationMode: ExactCount
+            count: {{ cell.gpus }}
