@@ -1,6 +1,7 @@
 # The experiment matrix: the single source of truth for every run cell. render.py expands it
 # into deploy/k8s/rendered/<run_id>/manifests.yaml (committed; CI fails if stale).
 #
+# Rails: each rdma_vf_rail<N> is a multi-plane VF (4 planes x 200 Gb/s = 800 Gb/s; sysfs rate shows one plane).
 # Every cell runs on the POD network (no hostNetwork anywhere): rendezvous through the headless
 # Service, NCCL's bootstrap over eth0, and the data path chosen by the transport block below.
 defaults:

@@ -23,7 +23,7 @@ TRANSPORT_COLOR = {
     "local": SERIES[6],
 }
 TEXT, MUTED, GRID = "#0b0b0b", "#52514e", "#e6e5e1"
-RAIL_GBPS = 200.0  # one rail VF's link rate (Gb/s)
+RAIL_GBPS = 800.0  # one rail VF: a multi-plane port, 4 planes x 200 Gb/s (rdma_p0..p3_rail<N>)
 
 
 def _style(ax, title: str, xlabel: str, ylabel: str):

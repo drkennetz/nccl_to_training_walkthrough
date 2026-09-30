@@ -45,7 +45,7 @@ def join_phases(df: pd.DataFrame, phases: list[dict]) -> pd.DataFrame:
 
 def per_phase_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Mean rate per phase/device/metric; for byte counters also Gb/s."""
-    s = df.groupby(["phase", "source", "device", "metric"], as_index=False)["rate_per_s"].mean()
+    s = df.groupby(["phase", "node", "source", "device", "metric"], as_index=False)["rate_per_s"].mean()
     s["gbps"] = [
         r * 8 / 1e9 if str(m).endswith(("_data", "_bytes")) else float("nan")
         for r, m in zip(s["rate_per_s"], s["metric"], strict=True)

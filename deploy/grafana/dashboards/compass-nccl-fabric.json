@@ -549,7 +549,7 @@
     {
       "type": "timeseries",
       "title": "Rail transmit rate (bytes on the wire)",
-      "description": "Host RDMA exporter (:9500), port_xmit_data in bytes. One rail VF links at 200 Gb/s: the rdma cells should pin the claimed rails near line rate at large messages; the nvlink cells leave them idle.",
+      "description": "Host RDMA exporter (:9500), port_xmit_data in bytes. A rail VF is a multi-plane port: 4 physical planes x 200 Gb/s = 800 Gb/s (sysfs `rate` shows one plane). The rdma cells ran the claimed rails at 410-480 Gb/s each; the nvlink cells leave them idle.",
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"

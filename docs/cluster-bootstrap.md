@@ -1,6 +1,7 @@
 # The cluster underneath: `infra/k8s_bootstrap`
 
-The benchmark ran on two NVIDIA GB300 compute trays (4 GPUs + 4 RDMA rail VFs each) plus one
+The benchmark ran on two NVIDIA GB300 compute trays (4 GPUs + 4 RDMA rail VFs each; a rail VF is a
+multi-plane port, 4 × 200 Gb/s planes = 800 Gb/s, although sysfs `rate` reports a single plane) plus one
 control-plane tray, leased from a shared Slurm pool and turned into a k3s cluster by the scripts
 vendored under `infra/k8s_bootstrap/` (a `git subtree` of `dkennetzoracle/k8s_bootstrap`, branch
 `feat/rdma-netns-mode`). This page explains what those scripts do and why, so the environment is

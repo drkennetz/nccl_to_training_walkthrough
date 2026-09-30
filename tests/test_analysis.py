@@ -55,6 +55,7 @@ def test_counters_pipeline(fixtures):
     phases = [{"name": "timed-1MiB", "t_start": 1000.0, "t_end": 1040.0}]
     j = counters.join_phases(r, phases)
     assert set(j.phase) == {"idle", "timed-1MiB"}
+    assert "node" in counters.per_phase_summary(j).columns
     s = counters.per_phase_summary(j)
     hot = s[(s.phase == "timed-1MiB") & (s.metric == "port_xmit_data")]
     assert hot.gbps.mean() == pytest.approx(16.0, rel=0.05)

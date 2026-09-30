@@ -166,7 +166,11 @@ def counters_table(results: list[dict]) -> pd.DataFrame:
         if h.empty:
             continue
 
-        def m(metric, col="rate_per_s", agg="sum", _h=h):
+        # one node's view (the rank-0 tray): per-rail figures are per rail, totals are per tray
+        node0 = sorted(h.node.unique())[0] if "node" in h.columns and len(h) else None
+        hn = h[h.node == node0] if node0 is not None else h
+
+        def m(metric, col="rate_per_s", agg="sum", _h=hn):
             v = _h[_h.metric == metric][col]
             return float(getattr(v, agg)()) if len(v) else float("nan")
 
