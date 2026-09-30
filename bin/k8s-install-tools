@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# bin/k8s-install-tools -- install kubectl and helm for the current user.
+#
+# The ONLY things this repo puts on the Slurm controller. No daemons, no systemd
+# units, no system packages.
+#
+# Installs into ~/.local/bin deliberately, NOT /usr/local/bin: on this controller
+# /usr/local/bin holds the Slurm client binaries (sbatch, sinfo, scontrol) and
+# other host tooling shared by every user. Writing there risks shadowing them.
+
+set -euo pipefail
+# shellcheck source=../lib/common.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/common.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-install-tools [--force] [--bin-dir DIR]
+
+Installs kubectl and helm (versions pinned in versions.env) into ~/.local/bin.
+
+  --bin-dir DIR   install somewhere else (must be user-writable, not /usr/local/bin)
+  --force         reinstall even if the pinned version is already present
+  -h, --help
+USAGE
+}
+
+BIN_DIR="${HOME}/.local/bin"
+FORCE=0
+while (($#)); do
+  case "$1" in
+    --bin-dir) BIN_DIR="${2:?}"; shift 2 ;;
+    --force)   FORCE=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+require_cmd curl tar
+# shellcheck source=../versions.env
+set -a; . "${REPO_ROOT}/versions.env"; set +a
+
+case "$BIN_DIR" in
+  /usr/local/bin|/usr/bin|/bin|/sbin|/usr/sbin)
+    die "refusing to install into ${BIN_DIR}: it is shared with host tooling (see CLAUDE.md)" ;;
+esac
+mkdir -p "$BIN_DIR"
+
+arch="$(uname -m)"
+case "$arch" in
+  aarch64|arm64) goarch=arm64 ;;
+  x86_64|amd64)  goarch=amd64 ;;
+  *) die "unsupported architecture: ${arch}" ;;
+esac
+log "installing for linux/${goarch} into ${BIN_DIR}"
+
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+
+# ------------------------------------------------------------------ kubectl
+have_kubectl="$("${BIN_DIR}/kubectl" version --client -o json 2>/dev/null \
+                 | jq -r '.clientVersion.gitVersion' 2>/dev/null || true)"
+if [[ "$have_kubectl" == "$KUBECTL_VERSION" && "$FORCE" != 1 ]]; then
+  ok "kubectl ${KUBECTL_VERSION} already installed"
+else
+  log "downloading kubectl ${KUBECTL_VERSION}"
+  base="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${goarch}"
+  curl -fsSL -o "${tmp}/kubectl"        "${base}/kubectl"        || die "kubectl download failed"
+  curl -fsSL -o "${tmp}/kubectl.sha256" "${base}/kubectl.sha256" || die "kubectl checksum download failed"
+  # Verify before trusting the binary. dl.k8s.io publishes a bare sha256.
+  printf '%s  %s\n' "$(cat "${tmp}/kubectl.sha256")" "${tmp}/kubectl" \
+    | sha256sum -c - >/dev/null || die "kubectl checksum MISMATCH -- refusing to install"
+  install -m 0755 "${tmp}/kubectl" "${BIN_DIR}/kubectl"
+  ok "kubectl $("${BIN_DIR}/kubectl" version --client -o json | jq -r .clientVersion.gitVersion)"
+fi
+
+# ------------------------------------------------------------------ helm
+have_helm="$("${BIN_DIR}/helm" version --template '{{.Version}}' 2>/dev/null || true)"
+if [[ "$have_helm" == "$HELM_VERSION" && "$FORCE" != 1 ]]; then
+  ok "helm ${HELM_VERSION} already installed"
+else
+  log "downloading helm ${HELM_VERSION}"
+  tgz="helm-${HELM_VERSION}-linux-${goarch}.tar.gz"
+  curl -fsSL -o "${tmp}/${tgz}"          "https://get.helm.sh/${tgz}"            || die "helm download failed"
+  curl -fsSL -o "${tmp}/${tgz}.sha256sum" "https://get.helm.sh/${tgz}.sha256sum" || die "helm checksum download failed"
+  ( cd "$tmp" && sha256sum -c "${tgz}.sha256sum" >/dev/null ) \
+    || die "helm checksum MISMATCH -- refusing to install"
+  tar -xzf "${tmp}/${tgz}" -C "$tmp"
+  install -m 0755 "${tmp}/linux-${goarch}/helm" "${BIN_DIR}/helm"
+  ok "helm $("${BIN_DIR}/helm" version --template '{{.Version}}')"
+fi
+
+# ------------------------------------------------------------------ PATH advice
+printf '\n'
+if [[ ":${PATH}:" == *":${BIN_DIR}:"* ]]; then
+  ok "${BIN_DIR} is already on your PATH"
+else
+  warn "${BIN_DIR} is NOT on your PATH. Add it:"
+  printf '    echo '\''export PATH="%s:$PATH"'\'' >> ~/.bashrc && . ~/.bashrc\n' "$BIN_DIR" >&2
+  printf '  (scripts in bin/ find it regardless -- lib/common.sh prepends it.)\n' >&2
+fi
+if load_cluster "" >/dev/null 2>&1 && state_has kubeconfig; then
+  printf '\n  kubeconfig for the current cluster:\n    export KUBECONFIG=%s\n' "$(state_path kubeconfig)" >&2
+else
+  printf '\n  no cluster yet -- run bin/k8s-up, then export the kubeconfig it prints\n' >&2
+fi

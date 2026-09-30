@@ -1,0 +1,72 @@
+# workloads/plumbing/04-dra-gpu.yaml -- Dynamic Resource Allocation for GPUs.
+#
+# OPT-IN gate. Only works with the DRA overlay installed:
+#
+#   bin/k8s-gpu --dra
+#   kubectl apply -f workloads/plumbing/04-dra-gpu.yaml
+#   kubectl wait --for=condition=complete job/dra-gpu --timeout=300s
+#   kubectl logs job/dra-gpu
+#
+# DRA is GA as of Kubernetes 1.34 (resource.k8s.io/v1, on by default), and this
+# k3s v1.36.4 serves it -- verified: deviceclasses, resourceclaims,
+# resourceclaimtemplates and resourceslices are all present. The NVIDIA DRA
+# driver on top of it (v0.5.0, chart v26.7.0) is still labelled EXPERIMENTAL.
+#
+# Instead of `limits: nvidia.com/gpu: 1`, the pod references a ResourceClaim
+# against the `gpu.nvidia.com` DeviceClass that the driver publishes. Note that
+# the device-plugin and DRA stacks are mutually exclusive -- with DRA installed,
+# manifests requesting nvidia.com/gpu will not schedule at all.
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: single-gpu
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpu
+          # `exactly` is the GA (resource.k8s.io/v1) spelling; earlier betas put
+          # deviceClassName directly on the request.
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            allocationMode: ExactCount
+            count: 1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dra-gpu
+  labels: {app: k8s-bootstrap-plumbing, gate: dra}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      # No runtimeClassName and no nvidia.com/gpu limit: the DRA driver injects
+      # the device through CDI based on the claim.
+      resourceClaims:
+        - name: gpu
+          resourceClaimTemplateName: single-gpu
+      containers:
+        - name: check
+          image: nvcr.io/nvidia/cuda:13.0.1-base-ubuntu24.04
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -e
+              echo "node       : ${NODE_NAME}"
+              echo "claim env  : $(env | grep -i nvidia | sort | paste -sd' ' || echo none)"
+              n=$(nvidia-smi -L | grep -c '^GPU')
+              echo "visible    : ${n}"
+              nvidia-smi -L
+              if [ "$n" -ne 1 ]; then
+                echo "DRA-GPU-FAILED: claimed 1 GPU but ${n} are visible"; exit 1
+              fi
+              echo "DRA-GPU-OK"
+          resources:
+            claims:
+              - name: gpu
+          env:
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}

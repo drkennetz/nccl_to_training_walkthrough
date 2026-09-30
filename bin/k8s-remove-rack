@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+# bin/k8s-remove-rack -- hand ONE rack back, leaving the rest of the cluster up.
+#
+# The difference from bin/k8s-down is that the cluster survives, and that has two
+# consequences it would be easy to get wrong:
+#
+#   1. Draining is worth doing here. k8s-down skips it because every node is
+#      going away and evicted pods have nowhere to land; here they do.
+#   2. The Node OBJECTS must be deleted. k8s-down deletes the whole cluster so
+#      stale Node objects evaporate with it; if we skip that step the removed
+#      trays linger forever as NotReady nodes, and the scheduler keeps trying to
+#      place DaemonSet pods on machines that are no longer ours.
+#
+# Order is still the k8s-down order where it matters: uninstall k3s from the
+# nodes BEFORE releasing the Slurm lease, because k3s runs under systemd outside
+# the job cgroup and would otherwise keep running on a node returning to the
+# shared pool.
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-remove-rack --rack LB/RACK [options]
+
+  --rack LB/RACK   the rack to hand back (required; see bin/k8s-status)
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --no-verify      skip the post-teardown verification (not recommended)
+  --dry-run        print the plan without changing anything
+  --yes            do not prompt
+  -h, --help
+
+Removes one rack's worth of workers and releases that rack's lease. The control
+plane is on its own lease and is never touched -- use bin/k8s-down for that.
+USAGE
+}
+
+CLUSTER="" RACK="" DO_VERIFY=1
+while (($#)); do
+  case "$1" in
+    --rack)      RACK="${2:?}"; shift 2 ;;
+    --cluster)   CLUSTER="${2:?}"; shift 2 ;;
+    --no-verify) DO_VERIFY=0; shift ;;
+    --dry-run)   DRY_RUN=1; shift ;;
+    --yes)       ASSUME_YES=1; shift ;;
+    -h|--help)   usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+load_cluster "$CLUSTER"
+
+# Deliberately a warning, not a gate. Uninstalling k3s runs entirely over ssh, so
+# a Slurm outage must not stop us handing nodes back clean -- that is the whole
+# do-no-harm bargain. Only the lease cancellation and the verify step need Slurm,
+# and both degrade loudly on their own.
+if ! slurm_ctld_up; then
+  warn "slurmctld is not responding: $(timeout 10 scontrol ping 2>&1 | head -1)"
+  warn "  continuing anyway: teardown is over ssh and returning the trays matters more."
+  warn "  The lease cancellation and verification will likely fail; re-run when Slurm is back."
+fi
+
+# ------------------------------------------------------------------ 0. resolve
+# --rack is required rather than inferred. This uninstalls software from borrowed
+# machines, so the target is named explicitly even when there is only one choice.
+if [[ -z "$RACK" ]]; then
+  usage >&2
+  held="$(slurm_leased_rackids)"
+  [[ -n "$held" ]] && err "racks currently held: ${held% }" || err "no rack leases recorded"
+  die "--rack is required"
+fi
+
+LEASE="$(slurm_lease_name_for_rack "$RACK")"
+slurm_rack_is_leased "$RACK" || {
+  held="$(slurm_leased_rackids)"
+  [[ -n "$held" ]] && err "racks currently held: ${held% }" || err "no rack leases recorded"
+  die "no lease '${LEASE}' for rack ${RACK}"
+}
+
+NODES="$(slurm_lease_nodes "$LEASE")"
+[[ -n "$NODES" ]] || die "lease '${LEASE}' has no recorded nodelist; use bin/k8s-down"
+
+# The control-plane tray lives on its own lease, so it should never appear in a
+# rack lease. Assert it anyway -- removing the API server here would be silent
+# and unrecoverable.
+CP="$(state_read controlplane)"
+if [[ -n "$CP" ]]; then
+  for n in $(nodes_expand "$NODES"); do
+    [[ "$n" == "$CP" ]] \
+      && die "lease '${LEASE}' contains the control-plane tray ${CP}; refusing. Use bin/k8s-down."
+  done
+fi
+
+step "plan"
+printf '  cluster : %s\n  rack    : %s\n  lease   : %s  (job %s, %s)\n  trays   : %s  (%s)\n  keeping : control plane %s\n' \
+  "$CLUSTER_NAME" "$RACK" "$LEASE" "$(slurm_lease_jobid "$LEASE")" \
+  "$(slurm_lease_state "$LEASE")" "$NODES" "$(nodes_count "$NODES")" "${CP:-<unknown>}" >&2
+
+[[ "$DRY_RUN" == 1 ]] || confirm "Remove rack ${RACK} from the cluster and release its lease?" \
+  || die "aborted by user"
+
+# ------------------------------------------------------------------ 1. drain
+# Unlike k8s-down, the cluster survives, so evicted pods have somewhere to go and
+# draining is a real courtesy to anything running. kbin bounds each drain with
+# timeout(1) and works whether or not the controller has kubectl installed.
+if state_has kubeconfig; then
+  step "cordon"
+  for n in $(nodes_expand "$NODES"); do kbin 30 cordon "${n,,}" >/dev/null 2>&1 || :; done
+
+  step "drain"
+  for n in $(nodes_expand "$NODES"); do
+    if kbin 120 drain "${n,,}" --ignore-daemonsets --delete-emptydir-data \
+         --force --timeout=100s >/dev/null 2>&1
+    then ok "  ${n,,} drained"
+    else warn "  drain of ${n,,} did not complete; continuing"
+    fi
+  done
+fi
+
+# ------------------------------------------------------------------ 2. uninstall
+# Before deleting the Node objects: teardown wants a live kubelet to uninstall,
+# and the generated uninstaller is on the node itself.
+step "uninstalling k3s"
+rc=0
+provider_teardown_nodes "$NODES" || rc=1
+
+# ------------------------------------------------------------------ 3. forget the nodes
+# Without this the trays stay in `kubectl get nodes` as NotReady forever.
+if state_has kubeconfig && [[ "$DRY_RUN" != 1 ]]; then
+  step "deleting the Node objects"
+  for n in $(nodes_expand "$NODES"); do
+    if kbin 60 delete node "${n,,}" --ignore-not-found >/dev/null 2>&1; then ok "  ${n,,} removed from the cluster"
+    else warn "  could not delete node object ${n,,}; it may linger as NotReady"
+    fi
+  done
+fi
+
+# ------------------------------------------------------------------ 4. release
+step "releasing the lease"
+slurm_cancel_lease "$LEASE"
+
+# ------------------------------------------------------------------ 5. verify
+if (( DO_VERIFY )) && [[ "$DRY_RUN" != 1 ]]; then
+  printf '\n'
+  step "verifying these trays came back clean"
+  # Slurm parks released nodes in COMPLETING for a moment before they return to idle.
+  sleep 10
+  "${REPO_ROOT}/bin/k8s-verify-clean" --cluster "$CLUSTER_NAME" --nodes "$NODES" || rc=1
+fi
+
+# ------------------------------------------------------------------ 6. report
+if [[ "$DRY_RUN" != 1 ]]; then
+  step "remaining cluster"
+  # kbin, not rkc: escaped dots in label keys do not survive rkc's remote re-parse.
+  kbin 30 get nodes -o custom-columns=\
+'NAME:.metadata.name,STATUS:.status.conditions[-1].type,RACK:.metadata.labels.k8s-bootstrap\.io/rack,GPUS:.status.allocatable.nvidia\.com/gpu' \
+    2>/dev/null | sed 's/^/  /' || warn "could not list remaining nodes"
+  held="$(slurm_leased_rackids)"
+  printf '\n  racks still held: %s\n' "${held:-<none>}" >&2
+fi
+
+(( rc == 0 )) && ok "rack ${RACK} removed and clean" \
+              || err "rack ${RACK} removed, but NOT verified clean -- investigate"
+exit $rc

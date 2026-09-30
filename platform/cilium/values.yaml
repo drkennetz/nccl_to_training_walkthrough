@@ -1,0 +1,123 @@
+# platform/cilium/values.yaml -- Cilium for a scratch cluster on borrowed Slurm trays.
+#
+# Two values are per-cluster and are passed with --set by lib/platform.sh, not
+# written here: k8sServiceHost and k8sServicePort. With kube-proxy disabled the
+# agents cannot reach the API through a Service IP, so they need the control
+# plane's real address, which is only known at install time.
+#
+# Chart version is pinned in versions.env (CILIUM_CHART_VERSION). Do not bump here.
+
+# ---------------------------------------------------------------- kube-proxy
+# k3s is started with --disable-kube-proxy, so Cilium MUST provide service
+# handling. These two settings are a matched pair with that flag: change one and
+# services silently stop working.
+kubeProxyReplacement: true
+
+# ---------------------------------------------------------------- datapath
+# Tunnel, not native routing. The control-plane tray and the workers sit in
+# DIFFERENT /19 subnets (e.g. 172.16.32.0/19 vs 172.16.0.0/24), so native routing
+# would need routes installed on someone else's fabric. Not ours to touch.
+routingMode: tunnel
+tunnelProtocol: geneve
+
+# Node interfaces are MTU 9000 (jumbo). Cilium probes the MTU and subtracts the
+# geneve overhead itself; setting it by hand here tends to go stale.
+autoDirectNodeRoutes: false
+
+# eBPF masquerading instead of iptables. Kernel is 6.14, well past the 5.10
+# minimum, and it keeps our footprint in the host's iptables smaller -- which
+# matters because teardown has to leave the host's rules untouched.
+bpf:
+  masquerade: true
+
+# ---------------------------------------------------------------- IPAM
+# k3s allocates a podCIDR per Node object; let Cilium follow that rather than
+# running its own allocator, so pod addressing stays inside --cluster-cidr.
+ipam:
+  mode: kubernetes
+k8s:
+  requireIPv4PodCIDR: true
+
+# ---------------------------------------------------------------- CNI paths
+# Left at the defaults (/opt/cni/bin, /etc/cni/net.d) ON PURPOSE. k3s with
+# --flannel-backend=none writes no CNI config and leaves containerd's defaults
+# in place precisely so a third-party CNI can drop in. Verified on a live node:
+# the generated containerd config has no [cni] section at all.
+#
+# exclusive=true lets Cilium own /etc/cni/net.d. If Multus is ever added for
+# RDMA/SR-IOV (step 9), this must become false.
+cni:
+  exclusive: true
+
+# ---------------------------------------------------------------- scale
+# Single control-plane tray, scratch cluster, no HA. One operator replica, and
+# it tolerates the control-plane taint so a workers=0 cluster can still come up.
+operator:
+  replicas: 1
+  # Tolerate EVERYTHING. This is the chart default and it is load-bearing, not
+  # laziness: the agents block until the operator registers Cilium's CRDs, and
+  # until the agents are ready every node is NotReady and therefore carries
+  # kubelet's automatic node.kubernetes.io/not-ready:NoSchedule taint. Narrowing
+  # this to just the control-plane taint deadlocks the whole bootstrap -- agents
+  # sit in "Still waiting for Cilium Operator to register CRDs" forever while the
+  # operator reports "0/2 nodes are available: 2 node(s) had untolerated taint(s)".
+  # Verified the hard way on a live cluster.
+  tolerations:
+    - operator: Exists
+  prometheus:
+    enabled: true
+    port: 9963
+
+# ---------------------------------------------------------------- observability
+# Ports chosen against a live node's listening sockets: 9962-9965 are free,
+# whereas 9100/9400/9500/9600/9700 belong to the host's own exporters (and 9876
+# to its healthcheck file server) and must not be bound. See CLAUDE.md.
+prometheus:
+  enabled: true
+  port: 9962
+
+hubble:
+  enabled: true
+  relay:
+    enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - "httpV2:exemplars=true;labelsContext=source_ip,source_namespace,source_workload,destination_ip,destination_namespace,destination_workload,traffic_direction"
+    enableOpenMetrics: true
+    port: 9965
+  # UI is a separate image and an extra thing to expose; skip it on a scratch
+  # cluster. `cilium hubble port-forward` covers interactive use.
+  ui:
+    enabled: false
+
+# ---------------------------------------------------------------- deliberately off
+# No LoadBalancer IP management of any kind. Squatting on unassigned addresses in
+# a managed subnet we do not own is out of bounds (CLAUDE.md rule 9). Services are
+# reached via NodePort and `kubectl port-forward`.
+l2announcements:
+  enabled: false
+l2podAnnouncements:
+  enabled: false
+
+# LB-IPAM is ON by default in this chart (verified: the rendered ConfigMap had
+# enable-lb-ipam: "true"). It is inert without a CiliumLoadBalancerIPPool, but
+# leaving it enabled means one stray CRD could start handing out addresses on a
+# subnet we do not own. Disable it at the datapath so the rule is enforced, not
+# merely unexercised.
+enableLBIPAM: false
+defaultLBServiceIPAM: none
+
+# Gateway API needs its CRDs installed first; enable in a later step if ingress
+# is actually needed. ingress-nginx is not an option -- archived 2026-03-24.
+gatewayAPI:
+  enabled: false
+ingressController:
+  enabled: false
+
+# Everything here is aarch64; these images are multi-arch but confirm on bump.

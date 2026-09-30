@@ -1,0 +1,135 @@
+#!/usr/bin/env bash
+# bin/k8s-up -- lease trays and bring up the Kubernetes control plane and workers.
+#
+# Order matters: preflight and snapshot BEFORE anything mutates a node, so we
+# always have a baseline to be judged against.
+#
+# After this, nodes are Ready only once a CNI exists (step 5). Until then they
+# register and report NotReady, which is expected.
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-up [options]
+
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --workers N      worker trays to lease (default 3); 0 = control plane only
+  --rack LB/RACK   pin to a specific rack instead of auto-selecting
+  --lease-time T   Slurm walltime for the leases (e.g. 04:00:00); default from cluster config
+  --no-cni         stop after joining nodes; do not install Cilium (nodes stay NotReady)
+  --dry-run        print the plan without touching Slurm or any node
+  --yes            do not prompt for confirmation
+  -h, --help
+
+Leases 1 control-plane tray + N worker trays from a SINGLE rack (one rack is one
+NVL72 NVLink domain). Nodes are held by placeholder Slurm jobs, not reservations.
+USAGE
+}
+
+CLUSTER="" WORKERS=3 RACK="" LEASE_TIME="" INSTALL_CNI=1
+while (($#)); do
+  case "$1" in
+    --cluster)    CLUSTER="${2:?}"; shift 2 ;;
+    --workers)    WORKERS="${2:?}"; shift 2 ;;
+    --rack)       RACK="${2:?}"; shift 2 ;;
+    --lease-time) LEASE_TIME="${2:?}"; shift 2 ;;
+    --no-cni)     INSTALL_CNI=0; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --yes)     ASSUME_YES=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+require_cmd ssh curl sinfo sbatch scontrol
+load_cluster "$CLUSTER"
+# Must come after load_cluster: sourcing the cluster config would overwrite these.
+if [[ -n "$LEASE_TIME" ]]; then
+  LEASE_CONTROLPLANE_TIME="$LEASE_TIME"; LEASE_RACK_TIME="$LEASE_TIME"
+  warn "lease walltime overridden to ${LEASE_TIME}"
+fi
+
+state_has kubeconfig && slurm_lease_alive controlplane \
+  && die "a cluster is already up (kubeconfig + live lease). Use bin/k8s-down first."
+
+# ------------------------------------------------------------------ 1. select
+need=$(( WORKERS + 1 ))
+mapfile -t trays < <(slurm_pick_verified_trays "$need" "$RACK")
+  # die() inside a process substitution exits only the subshell, so an empty
+  # result must be checked here or `set -u` trips on trays[0] with no explanation.
+  (( ${#trays[@]} == need )) || die "could not select ${need} identity-verified idle tray(s) from a single rack -- see bin/k8s-status for current capacity"
+CP="${trays[0]}"
+WORKER_LIST=""; (( WORKERS > 0 )) && WORKER_LIST="$(nodes_compress "${trays[@]:1}")"
+RACKID="$(slurm_node_rackid "$CP")"
+ALL="$(nodes_compress "${trays[@]}")"
+
+step "plan"
+cat <<PLAN >&2
+  cluster        : ${CLUSTER_NAME}
+  rack           : ${RACKID}   ($([[ "${NODE_TOPOLOGY:-name}" == flat ]] && echo "flat pseudo-rack; NVLink ends at each node" || echo "one NVL72 NVLink domain"))
+  control plane  : ${CP}
+  workers        : ${WORKER_LIST:-<none>}
+  k3s            : ${K3S_VERSION}
+  pod / svc CIDR : ${POD_CIDR} / ${SERVICE_CIDR}
+  data dir       : ${K3S_DATA_DIR}   (node root fs is far too small)
+  binaries       : ${NODE_INSTALL_DIR}/bin   (never /usr/local/bin)
+PLAN
+
+[[ "$DRY_RUN" == 1 ]] || confirm "Lease ${need} tray(s) and install k3s?" \
+  || die "aborted by user"
+
+# ------------------------------------------------------------------ 2. preflight
+step "preflight"
+preflight_nodes "$ALL" || die "preflight failed -- refusing to install"
+
+step "baseline snapshot"
+snapshot_nodes "$ALL" pre || die "could not capture baseline -- refusing to install"
+
+# ------------------------------------------------------------------ 3. lease
+step "leasing trays"
+slurm_lease_controlplane "$CP" >/dev/null
+slurm_wait_lease controlplane
+if [[ -n "$WORKER_LIST" ]]; then
+  slurm_lease_rack "$RACKID" "$WORKER_LIST" >/dev/null
+  slurm_wait_lease "$(slurm_lease_name_for_rack "$RACKID")"
+fi
+state_write rack <<<"$RACKID"
+
+# ------------------------------------------------------------------ 4. install
+step "installing control plane"
+provider_install_server "$CP"
+
+if [[ -n "$WORKER_LIST" ]]; then
+  step "joining workers"
+  provider_install_agents "$WORKER_LIST" || warn "one or more agents failed to join"
+fi
+
+# ------------------------------------------------------------------ 5. cni
+# Nodes stay NotReady until a CNI exists, so this is part of bring-up rather
+# than an optional extra. Everything after this point needs pod networking.
+if (( INSTALL_CNI )); then
+  step "installing CNI"
+  platform_install_cilium || die "Cilium install failed; cluster is up but nodes are NotReady"
+fi
+
+# ------------------------------------------------------------------ 6. report
+step "result"
+if [[ "$DRY_RUN" != 1 ]]; then
+  rkc get nodes -o wide 2>/dev/null | sed 's/^/  /' || warn "could not list nodes yet"
+  cat <<NEXT >&2
+
+  kubeconfig: $(state_path kubeconfig)
+    export KUBECONFIG=$(state_path kubeconfig)
+
+$( (( INSTALL_CNI )) \
+     && printf '  Cilium %s is installed; nodes should be Ready.\n  Next: prove the plumbing -> kubectl apply -f workloads/plumbing/01-gpu-smoke.yaml' "${CILIUM_VERSION}" \
+     || printf '  No CNI installed (--no-cni): nodes will stay NotReady until you run one.' )
+
+  Tear down with: bin/k8s-down     (never plain scancel)
+NEXT
+fi
+ok "up"

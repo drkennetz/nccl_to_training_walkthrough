@@ -1,0 +1,258 @@
+# workloads/plumbing/09-nccl-4x4-dra.yaml -- gate 08, allocated via DRA.
+#
+# Same proof as 08-nccl-4x4.yaml (4 GPUs x 2 trays = 8 ranks, all over NVLink),
+# but the GPUs come from a ResourceClaim instead of `limits: nvidia.com/gpu: 4`.
+#
+# WHY THIS FILE EXISTS. The two GPU stacks are mutually exclusive. Under
+# `bin/k8s-gpu --dra` the device-plugin DaemonSet is removed and nvidia.com/gpu
+# stops existing as a resource entirely -- node allocatable reads <none>, not 0 --
+# so gates 07 and 08 never schedule and the scheduler says:
+#
+#   0/4 nodes are available: 1 node(s) had untolerated taint(s),
+#   3 Insufficient nvidia.com/gpu
+#
+# That is not a capacity problem and no amount of adding nodes fixes it. Use this
+# file on DRA, or switch back with `bin/k8s-gpu` (device-plugin mode) and use 08.
+#
+#   bin/k8s-gpu --dra
+#   kubectl apply -f workloads/plumbing/09-nccl-4x4-dra.yaml
+#   kubectl wait --for=condition=complete job/nccl-4x4-dra --timeout=900s
+#   kubectl logs job/nccl-4x4-dra -l batch.kubernetes.io/job-completion-index=0
+#
+# TWO SUBTLETIES, both load-bearing:
+#
+# 1. `runtimeClassName: nvidia` is KEPT, even though gate 04 (DRA, single GPU)
+#    omits it and works. It is here for IMEX, not for the GPUs. Our containerd
+#    drop-in allowlists `cdi.k8s.io/*` on the *nvidia* runtime table only
+#    (node/install-containerd-cdi-annotations.sh), so a pod on the default runc
+#    runtime gets the imex annotation silently dropped -- and NCCL then reports
+#    "MNNVL is available but not working on this system". The DRA driver sets
+#    NVIDIA_VISIBLE_DEVICES=void in its own CDI spec precisely so the legacy
+#    nvidia hook does not also inject GPUs, so the two mechanisms coexist.
+#
+# 2. The claim is per-POD, not per-container, and `count: 4` means four whole
+#    GB300s from one node. ResourceSlices advertise 4 devices per tray, so a
+#    5th would make the pod unschedulable rather than spill to another node.
+---
+apiVersion: resource.k8s.io/v1
+kind: ResourceClaimTemplate
+metadata:
+  name: four-gpus
+spec:
+  spec:
+    devices:
+      requests:
+        - name: gpus
+          # `exactly` is the GA (resource.k8s.io/v1) spelling; earlier betas put
+          # deviceClassName directly on the request.
+          exactly:
+            deviceClassName: gpu.nvidia.com
+            allocationMode: ExactCount
+            count: 4
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nccl-4x4-dra
+spec:
+  clusterIP: None
+  selector: {app: nccl-4x4-dra}
+  ports:
+    - {name: rendezvous, port: 29401}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nccl-4x4-dra
+  labels: {app: k8s-bootstrap-plumbing, gate: nccl-4x4-dra}
+spec:
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: {app: nccl-4x4-dra}
+      annotations:
+        # See subtlety 1 above: this is why runtimeClassName stays.
+        cdi.k8s.io/imex: "nvidia.com/imex-channel=all"
+    spec:
+      restartPolicy: Never
+      subdomain: nccl-4x4-dra
+      runtimeClassName: nvidia
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        k8s-bootstrap.io/role: worker
+        # On a cluster holding MORE THAN ONE rack, add the rack too: a rack is one NVLink
+        # domain, and two pods placed in different racks have no MNNVL path between them
+        # ("MNNVL is available but not working" — a false gate failure, not a fabric fault).
+        # k8s-bootstrap.io/rack: <rack>
+      # One claim template, consumed by the container below. Each pod gets its
+      # own ResourceClaim instance generated from it.
+      resourceClaims:
+        - name: gpus
+          resourceClaimTemplateName: four-gpus
+      affinity:
+        podAntiAffinity:
+          # Hard, so the 8 ranks cannot all land on one tray -- which would still
+          # "pass" while proving nothing about cross-node traffic.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app: nccl-4x4-dra}
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        # NCCL needs real shared memory for its intra-node transport; the default
+        # 64MiB /dev/shm is not enough for 4 local ranks.
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 32Gi}
+      containers:
+        - name: nccl
+          image: nvcr.io/nvidia/pytorch:25.08-py3
+          # No nvidia.com/gpu limit -- that resource does not exist under DRA.
+          resources:
+            claims:
+              - name: gpus
+          volumeMounts:
+            - {name: shm, mountPath: /dev/shm}
+          env:
+            - name: NODE_RANK
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+            - name: MASTER_ADDR
+              value: nccl-4x4-dra-0.nccl-4x4-dra
+            - name: MASTER_PORT
+              value: "29401"
+            - name: NCCL_DEBUG
+              value: INFO
+            - name: NCCL_DEBUG_SUBSYS
+              value: INIT,GRAPH
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -o pipefail
+              echo "=== node_rank ${NODE_RANK} on ${NODE_NAME} (DRA) ==="
+              echo "GPUs visible : $(nvidia-smi -L | grep -c '^GPU')"
+              echo "NVIDIA_* env : $(env | grep -i '^NVIDIA' | sort | paste -sd' ' || echo none)"
+              echo "IMEX channels: $(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null | tr '\n' ' ')"
+              echo "clique       : $(nvidia-smi -q | awk '/CliqueId/{print $NF}' | sort -u | paste -sd,)"
+              echo "/dev/shm     : $(df -h /dev/shm | tail -1 | awk '{print $2}')"
+              echo
+
+              # The claim must really have produced 4 GPUs before torchrun is told
+              # to start 4 ranks, or the failure is an opaque CUDA error instead.
+              vis=$(nvidia-smi -L | grep -c '^GPU')
+              if [ "$vis" -ne 4 ]; then
+                echo "NCCL-4x4-DRA-FAILED: claim yielded ${vis} GPU(s), expected 4"; exit 1
+              fi
+              if [ -z "$(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null)" ]; then
+                echo "NCCL-4x4-DRA-FAILED: no IMEX channel in the container."
+                echo "  The cdi.k8s.io/imex annotation was dropped. Check that"
+                echo "  runtimeClassName is nvidia and that node/install-containerd-cdi-annotations.sh"
+                echo "  ran on this tray (provider_enable_imex_access)."
+                exit 1
+              fi
+
+              cat > /tmp/ar44.py <<'PY'
+              import json, os, socket, time
+              import torch, torch.distributed as dist
+
+              local = int(os.environ["LOCAL_RANK"])
+              torch.cuda.set_device(local)
+              dist.init_process_group("nccl")
+              rank, world = dist.get_rank(), dist.get_world_size()
+
+              # Who is where: proves the communicator really spans two machines.
+              me = {"rank": rank, "local_rank": local, "host": socket.gethostname(),
+                    "gpu": torch.cuda.get_device_name(local)}
+              everyone = [None] * world
+              dist.all_gather_object(everyone, me)
+
+              # 512MiB of bf16 per rank.
+              n = 512 * 1024 * 1024 // 2
+              x = torch.ones(n, dtype=torch.bfloat16, device="cuda")
+              for _ in range(5):
+                  dist.all_reduce(x)
+              torch.cuda.synchronize(); dist.barrier()
+
+              iters = 20
+              t0 = time.perf_counter()
+              for _ in range(iters):
+                  dist.all_reduce(x)
+              torch.cuda.synchronize()
+              dt = (time.perf_counter() - t0) / iters
+
+              nbytes = x.numel() * x.element_size()
+              busbw = nbytes * 2 * (world - 1) / world / dt / 1e9
+
+              # Correctness on a FRESH tensor: x has been summed in place 25 times
+              # by now, so it holds world**25, not world. (Gate 07 got this wrong
+              # and failed a working run.)
+              y = torch.ones(4096, dtype=torch.bfloat16, device="cuda")
+              dist.all_reduce(y)
+              ok = bool(torch.all(y == world).item())
+
+              # Aggregate over every rank. Each pod's torchrun only captures the
+              # stdout of ITS OWN 4 ranks, so counting "correct=True" lines in one
+              # pod's log can never reach 8.
+              flags = [None] * world
+              dist.all_gather_object(flags, ok)
+              all_ok = all(bool(f) for f in flags)
+
+              if rank == 0:
+                  hosts = sorted({e["host"] for e in everyone})
+                  print("TOPO " + json.dumps({
+                      "world_size": world,
+                      "n_hosts": len(hosts),
+                      "hosts": hosts,
+                      "ranks_per_host": {h: sum(1 for e in everyone if e["host"] == h) for h in hosts},
+                      "gpu": everyone[0]["gpu"],
+                  }), flush=True)
+                  print("PERF " + json.dumps({
+                      "bytes_per_rank": nbytes,
+                      "seconds": round(dt, 6),
+                      "algbw_GBs": round(nbytes / dt / 1e9, 2),
+                      "busbw_GBs": round(busbw, 2),
+                  }), flush=True)
+                  print("VALIDATION " + json.dumps({
+                      "ranks_ok": sum(1 for f in flags if f),
+                      "world_size": world,
+                      "all_ok": all_ok,
+                  }), flush=True)
+              print("RANK%d correct=%s host=%s local_rank=%d" % (rank, ok, me["host"], local), flush=True)
+              dist.destroy_process_group()
+              PY
+
+              torchrun \
+                --nnodes=2 --nproc_per_node=4 --node_rank="${NODE_RANK}" \
+                --master_addr="${MASTER_ADDR}" --master_port="${MASTER_PORT}" \
+                /tmp/ar44.py 2>&1 | tee /tmp/out.txt
+              rc=$?
+
+              # Only node_rank 0 makes the assertions; rank 1 just has to exit 0.
+              if [ "${NODE_RANK}" != "0" ]; then
+                [ "$rc" = 0 ] && { echo "NODE1-OK"; exit 0; } || { echo "NODE1-FAILED"; exit 1; }
+              fi
+
+              echo
+              echo "=== topology NCCL built ==="
+              grep -oE "nRanks [0-9]+ nNodes [0-9]+ localRanks [0-9]+.*MNNVL [0-9]" /tmp/out.txt | sort -u | head -3 | sed 's/^/  /'
+              echo "  P2P/MNNVL channels: $(grep -c 'via P2P/MNNVL' /tmp/out.txt || true)"
+              echo "  NET/Socket in data path: $(grep -c 'via NET/Socket' /tmp/out.txt || true)"
+
+              [ "$rc" = 0 ] || { echo "NCCL-4x4-DRA-FAILED: torchrun exited ${rc}"; exit 1; }
+              # Rank 0 all_gathers every rank's verdict, so one line covers all 8.
+              grep -q '"all_ok": true' /tmp/out.txt \
+                || { echo "NCCL-4x4-DRA-FAILED: not every rank validated -- $(grep -o 'VALIDATION .*' /tmp/out.txt | head -1)"; exit 1; }
+              grep -q '"ranks_ok": 8' /tmp/out.txt \
+                || { echo "NCCL-4x4-DRA-FAILED: fewer than 8 ranks validated"; exit 1; }
+              grep -q '"world_size": 8' /tmp/out.txt || { echo "NCCL-4x4-DRA-FAILED: world_size != 8"; exit 1; }
+              grep -q '"n_hosts": 2' /tmp/out.txt \
+                || { echo "NCCL-4x4-DRA-FAILED: ranks did not span 2 hosts -- $(grep -o 'TOPO .*' /tmp/out.txt | head -1)"; exit 1; }
+              grep -q '"ranks_per_host"' /tmp/out.txt \
+                || { echo "NCCL-4x4-DRA-FAILED: no topology reported"; exit 1; }
+              grep -q "via P2P/MNNVL" /tmp/out.txt || { echo "NCCL-4x4-DRA-FAILED: no P2P/MNNVL in the data path"; exit 1; }
+              echo "NCCL-4x4-DRA-OK (8 ranks, 2 trays, multi-node NVLink, GPUs via DRA)"

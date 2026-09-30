@@ -1,0 +1,48 @@
+# workloads/plumbing/03-gpu-resource.yaml -- can a pod REQUEST a GPU and get it?
+#
+# Gate 3. Distinct from gate 1: gate 1 proved the container runtime can reach the
+# GPUs (runtimeClassName: nvidia, all 4 visible, no scheduler involvement). This
+# proves the *scheduler* accounts for GPUs -- the pod requests nvidia.com/gpu: 1
+# and the device plugin hands it exactly one.
+#
+# Requires the GPU Operator in device-plugin mode (the default). Under the DRA
+# overlay there is no nvidia.com/gpu resource and this Job will stay Pending --
+# use 04-dra-gpu.yaml instead.
+#
+#   kubectl apply -f workloads/plumbing/03-gpu-resource.yaml
+#   kubectl wait --for=condition=complete job/gpu-resource --timeout=300s
+#   kubectl logs job/gpu-resource
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gpu-resource
+  labels: {app: k8s-bootstrap-plumbing, gate: "3"}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      runtimeClassName: nvidia
+      containers:
+        - name: check
+          image: nvcr.io/nvidia/cuda:13.0.1-base-ubuntu24.04
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -e
+              echo "node       : ${NODE_NAME}"
+              n=$(nvidia-smi -L | grep -c '^GPU')
+              echo "visible    : ${n}"
+              nvidia-smi -L
+              # The whole point: we asked for ONE, so exactly one must be visible.
+              # Seeing 4 here would mean the device plugin is not isolating at all.
+              if [ "$n" -ne 1 ]; then
+                echo "GPU-RESOURCE-FAILED: requested 1 GPU but ${n} are visible"; exit 1
+              fi
+              echo "GPU-RESOURCE-OK"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          env:
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}

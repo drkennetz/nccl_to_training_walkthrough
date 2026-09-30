@@ -1,0 +1,129 @@
+# workloads/plumbing/02-pod-to-pod.yaml -- does the CNI carry traffic between
+# pods on DIFFERENT nodes, and do ClusterIP services work without kube-proxy?
+#
+# Gate 2 of 3. The real test of the Cilium install: the trays sit in different
+# /19 subnets, so cross-node pod traffic must ride the geneve tunnel. It also
+# exercises Cilium's kube-proxy replacement (there is no kube-proxy) and CoreDNS.
+#
+#   kubectl apply -f workloads/plumbing/02-pod-to-pod.yaml
+#   kubectl wait --for=condition=complete job/pod-to-pod --timeout=300s
+#   kubectl logs job/pod-to-pod
+#
+# Two things this file gets right that a naive version does not:
+#
+#  1. It WAITS for endpoints. Applied all at once, the Job starts before the
+#     DaemonSet pods are ready and every request fails for reasons that have
+#     nothing to do with the CNI.
+#  2. It resolves a HEADLESS service to get real pod IPs. DNS on a normal
+#     ClusterIP service returns the virtual IP, so "direct pod-to-pod" via that
+#     name silently re-tests the service path instead.
+#
+# It also counts failures and exits nonzero. An earlier version printed its
+# success marker unconditionally and reported OK through five failed requests.
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netprobe
+  labels: {app: netprobe}
+spec:
+  selector: {matchLabels: {app: netprobe}}
+  template:
+    metadata:
+      labels: {app: netprobe}
+    spec:
+      # One per node INCLUDING the tainted control-plane tray, so tunnelling is
+      # proven in both directions across subnets.
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: probe
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          args: ["netexec", "--http-port=8080"]
+          ports: [{containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /healthz, port: 8080}
+            initialDelaySeconds: 2
+            periodSeconds: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: netprobe
+spec:
+  selector: {app: netprobe}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+# Headless: DNS returns the POD addresses, which is what makes a genuine
+# cross-node pod-to-pod test possible.
+apiVersion: v1
+kind: Service
+metadata:
+  name: netprobe-headless
+spec:
+  clusterIP: None
+  selector: {app: netprobe}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pod-to-pod
+  labels: {app: k8s-bootstrap-plumbing, gate: "2"}
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: check
+          image: registry.k8s.io/e2e-test-images/agnhost:2.53
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              SVC=netprobe.default.svc.cluster.local
+              HEAD=netprobe-headless.default.svc.cluster.local
+              fail=0
+              note() { echo "  $*"; }
+
+              echo "== waiting for probe endpoints to appear in DNS =="
+              for i in $(seq 1 60); do
+                n=$(getent ahostsv4 "$HEAD" 2>/dev/null | awk '{print $1}' | sort -u | grep -c .)
+                [ "${n:-0}" -ge 1 ] && { note "$n endpoint(s) after ${i}s"; break; }
+                sleep 1
+              done
+              PODIPS=$(getent ahostsv4 "$HEAD" 2>/dev/null | awk '{print $1}' | sort -u)
+              [ -n "$PODIPS" ] || { echo "FAIL: no pod endpoints resolved"; exit 1; }
+
+              echo "== CoreDNS resolves the ClusterIP service =="
+              CIP=$(getent hosts "$SVC" | awk '{print $1}')
+              if [ -n "$CIP" ]; then note "$SVC -> $CIP"; else note "FAIL dns"; fail=$((fail+1)); fi
+
+              echo "== ClusterIP round-trip (Cilium kube-proxy replacement) =="
+              for i in 1 2 3 4 5; do
+                if out=$(curl -sS --max-time 5 "http://${SVC}:8080/hostname"); then
+                  note "attempt $i -> $out"
+                else
+                  note "attempt $i -> FAILED"; fail=$((fail+1))
+                fi
+              done
+
+              echo "== direct pod-to-pod, real pod IPs (geneve tunnel) =="
+              for ip in $PODIPS; do
+                if out=$(curl -sS --max-time 5 "http://${ip}:8080/hostname"); then
+                  note "$ip -> $out"
+                else
+                  note "$ip -> FAILED"; fail=$((fail+1))
+                fi
+              done
+
+              # Every probe must have been reachable, or we did not really test
+              # cross-node traffic.
+              got=$(echo "$PODIPS" | grep -c .)
+              note "distinct pod endpoints reached: $got"
+              [ "$got" -ge 2 ] || { note "WARNING only $got endpoint(s); cross-node not proven"; }
+
+              echo
+              if [ "$fail" -eq 0 ]; then echo "POD-TO-POD-OK"; else echo "POD-TO-POD-FAILED ($fail failures)"; exit 1; fi

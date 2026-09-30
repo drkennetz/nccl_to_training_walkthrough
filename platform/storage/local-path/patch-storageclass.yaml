@@ -1,0 +1,16 @@
+# Make local-path the cluster default. RWO only and node-local: a pod that moves
+# nodes loses the data, which is the right trade for scratch and checkpoints on a
+# 28T NVMe. Use the `nfs` StorageClass for anything that must be shared (RWX).
+#
+# reclaimPolicy stays Delete: this is a scratch cluster on borrowed nodes, and
+# leaving directories behind on someone else's disk is exactly what teardown has
+# to avoid.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: rancher.io/local-path
+reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer

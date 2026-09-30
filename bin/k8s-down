@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# bin/k8s-down -- tear down the cluster and hand the trays back clean.
+#
+# Order is the whole point: uninstall k3s from the nodes FIRST, then release the
+# Slurm leases. k3s runs under systemd outside the job cgroup, so cancelling the
+# lease first would leave kubelet running on a node returning to the shared pool.
+
+set -euo pipefail
+# shellcheck source=../lib/platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/platform.sh"
+
+usage() {
+  cat <<USAGE
+usage: k8s-down [options]
+
+  --cluster NAME   cluster config (default: sole config in clusters/)
+  --nodes LIST     tear down only these trays
+  --keep-leases    uninstall k3s but keep holding the trays
+  --no-verify      skip the post-teardown verification (not recommended)
+  --dry-run        print the plan without changing anything
+  --yes            do not prompt
+  -h, --help
+USAGE
+}
+
+CLUSTER="" NODES="" KEEP_LEASES=0 DO_VERIFY=1
+while (($#)); do
+  case "$1" in
+    --cluster)     CLUSTER="${2:?}"; shift 2 ;;
+    --nodes)       NODES="${2:?}"; shift 2 ;;
+    --keep-leases) KEEP_LEASES=1; shift ;;
+    --no-verify)   DO_VERIFY=0; shift ;;
+    --dry-run)     DRY_RUN=1; shift ;;
+    --yes)         ASSUME_YES=1; shift ;;
+    -h|--help)     usage; exit 0 ;;
+    *) usage >&2; die "unknown argument: $1" ;;
+  esac
+done
+
+require_not_root
+load_cluster "$CLUSTER"
+
+# Prefer the leases as the source of truth, but fall back to the baseline set so
+# a SIGKILLed lease (whose trap never ran) can still be cleaned up.
+if [[ -z "$NODES" ]]; then
+  NODES="$(slurm_all_leased_nodes | paste -sd,)"
+  if [[ -z "$NODES" ]]; then
+    mapfile -t baselined < <(find "${STATE_DIR}/snapshots/pre" -maxdepth 1 -mindepth 1 \
+                               -type d -printf '%f\n' 2>/dev/null | sort)
+    ((${#baselined[@]})) || die "nothing to tear down"
+    NODES="$(nodes_compress "${baselined[@]}")"
+    warn "no live leases; using baselined trays (a lease may have been killed without cleanup)"
+  fi
+fi
+
+step "plan"
+printf '  trays  : %s\n  leases : %s\n' \
+  "$(nodes_compress "$(nodes_expand "$NODES" | paste -sd' ')")" \
+  "$(slurm_list_leases | paste -sd, || echo none)" >&2
+
+[[ "$DRY_RUN" == 1 ]] || confirm "Uninstall k3s and release these trays?" || die "aborted by user"
+
+# ------------------------------------------------------------------ 1. drain
+# Only worth doing when we are removing SOME nodes and the cluster survives, so
+# workloads can move. Draining every node at once just blocks until the timeout:
+# the evicted pods have nowhere to go, and we are about to delete the cluster
+# anyway. Cordon is cheap and harmless either way.
+if state_has kubeconfig && command -v kubectl >/dev/null 2>&1; then
+  # `|| :` inside the substitution: with the API server gone (a lease that was scancel-ed,
+  # the very case the baselined-trays fallback above exists for) the pipeline fails and
+  # `set -eo pipefail` would otherwise exit here, silently, right after the confirmation.
+  all_nodes="$({ kc get nodes -o name 2>/dev/null || :; } | sed 's|node/||' | sort | paste -sd,)"
+  target_nodes="$(nodes_expand "$NODES" | tr 'A-Z' 'a-z' | sort | paste -sd,)"
+  step "cordon"
+  for n in $(nodes_expand "$NODES"); do kc cordon "$n" >/dev/null 2>&1 || :; done
+
+  if [[ -n "$all_nodes" && "$all_nodes" == "$target_nodes" ]]; then
+    log "tearing down every node; skipping drain (nowhere to evict to)"
+  else
+    step "drain"
+    # kbin, not `timeout 90 kc`: timeout(1) cannot exec a shell function, so the
+    # old form exited 127 without draining anything and then reported a timeout.
+    for n in $(nodes_expand "$NODES"); do
+      kbin 90 drain "${n,,}" --ignore-daemonsets --delete-emptydir-data \
+        --force --timeout=75s >/dev/null 2>&1 || warn "  drain of ${n} did not complete; continuing"
+    done
+  fi
+fi
+
+# ------------------------------------------------------------------ 2. uninstall
+step "uninstalling k3s"
+td_rc=0
+provider_teardown_nodes "$NODES" || td_rc=1
+
+# ------------------------------------------------------------------ 2b. shared storage
+# Our NFS volume directories live on a filesystem shared with other people, and
+# a hard teardown never deleted the PVCs that would have cleaned them up.
+step "cleaning our directories off the shared filesystem"
+platform_cleanup_nfs || warn "shared-storage cleanup incomplete; check ${SHARED_FS:-/fss}"
+
+# ------------------------------------------------------------------ 3. release
+if (( KEEP_LEASES )); then
+  warn "keeping leases as requested; trays are still held"
+else
+  step "releasing leases"
+  for l in $(slurm_list_leases); do slurm_cancel_lease "$l"; done
+fi
+
+# ------------------------------------------------------------------ 4. forget
+if [[ "$DRY_RUN" != 1 ]] && (( ! KEEP_LEASES )); then
+  state_rm kubeconfig; state_rm node-token; state_rm controlplane; state_rm rack
+fi
+
+# ------------------------------------------------------------------ 5. verify
+if (( DO_VERIFY )) && [[ "$DRY_RUN" != 1 ]]; then
+  printf '\n'
+  step "verifying the trays came back clean"
+  # Give Slurm a moment to move the nodes out of COMPLETING.
+  sleep 10
+  "${REPO_ROOT}/bin/k8s-verify-clean" --cluster "$CLUSTER_NAME" --nodes "$NODES" || td_rc=1
+fi
+
+(( td_rc == 0 )) && ok "down and clean" || err "down, but NOT verified clean -- investigate"
+exit $td_rc

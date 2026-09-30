@@ -1,0 +1,23 @@
+# platform/storage/local-path/kustomization.yaml
+#
+# local-path-provisioner from the pinned upstream release manifest, patched for
+# this environment. Deployed as plain manifests rather than via k3s's bundled
+# local-storage addon so that (a) GitOps can manage it and (b) it transfers to a
+# kubeadm cluster unchanged.
+#
+# The version below is checked against versions.env by tests/test-version-pins.sh.
+# It is written literally rather than substituted so Argo CD can render this
+# directory directly.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.37/deploy/local-path-storage.yaml
+
+patches:
+  # Upstream defaults to /opt/local-path-provisioner, which is on the node root
+  # filesystem -- about 85G free here, against 28T on the NVMe. Container images
+  # and checkpoints must not go there.
+  - path: patch-config.yaml
+  # Upstream ships the StorageClass without the default-class annotation.
+  - path: patch-storageclass.yaml

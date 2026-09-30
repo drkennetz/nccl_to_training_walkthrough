@@ -1,0 +1,211 @@
+# workloads/plumbing/07-nccl-2node.yaml -- THE GATE.
+#
+# REQUIRES DEVICE-PLUGIN MODE. This requests `limits: nvidia.com/gpu`, which does not
+# exist under `bin/k8s-gpu --dra` -- the pod stays Pending with `Insufficient
+# nvidia.com/gpu` no matter how many nodes you add. On DRA use
+# workloads/plumbing/09-nccl-4x4-dra.yaml, or switch back with `bin/k8s-gpu`.
+#
+# Validates the single assumption the entire GPU design rests on: that NCCL works
+# inside a pod against the HOST-MANAGED IMEX domain (Path A), so we never have to
+# mask the provider's nvidia-imex.service. If this fails, Path A is insufficient
+# and the answer is Path B (DRA ComputeDomain), which mutates host state -- a
+# decision worth making before building training on top, not after.
+#
+#   kubectl apply -f workloads/plumbing/07-nccl-2node.yaml
+#   kubectl wait --for=condition=complete job/nccl-2node --timeout=900s
+#   kubectl logs job/nccl-2node -l batch.kubernetes.io/job-completion-index=0
+#
+# WHY PYTORCH AND NOT nccl-tests
+# The prebuilt nccl-tests on /fss is linked against OpenMPI, and mpirun needs an
+# ssh path between ranks -- which in Kubernetes means the MPI Operator or ssh
+# sidecars. torch.distributed drives the SAME NCCL library, bootstraps over TCP
+# through the pod network, and then lets NCCL pick its own transport for the data.
+# NCCL_DEBUG=INFO reports which transport it picked, which is exactly the question
+# this gate exists to answer. No extra operator, no ssh.
+#
+# WHAT MAKES IT A REAL TWO-NODE TEST
+#  - Indexed Job with completions=2: each pod gets a distinct rank from
+#    JOB_COMPLETION_INDEX, and Kubernetes sets the hostname to <job>-<index>, so
+#    rank 0 is addressable as nccl-2node-0.nccl-2node for the rendezvous.
+#  - Hard podAntiAffinity on kubernetes.io/hostname: the two pods CANNOT land on
+#    the same node, so a pass cannot be an accidental single-node result.
+#  - The job asserts it saw 2 distinct nodes and 8 GPUs before reporting OK.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nccl-2node
+spec:
+  clusterIP: None          # headless: gives the pods stable DNS for rendezvous
+  selector:
+    app: nccl-2node
+  ports:
+    - {name: rendezvous, port: 29500}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nccl-2node
+  labels: {app: k8s-bootstrap-plumbing, gate: nccl}
+spec:
+  completions: 2
+  parallelism: 2
+  completionMode: Indexed   # required for the per-rank hostname
+  backoffLimit: 0           # a retry would reshuffle ranks; fail loudly instead
+  template:
+    metadata:
+      labels: {app: nccl-2node}
+      annotations:
+        # How a pod gets the IMEX channel WITHOUT privileged. The nvidia runtime
+        # honours cdi.k8s.io/* (annotation-prefixes in its host config) and reads
+        # /var/run/cdi, where node/install-imex-cdi.sh writes our additive spec.
+        #
+        # Two prerequisites, both handled by node/ scripts:
+        #  - the spec must exist            -> node/install-imex-cdi.sh
+        #  - containerd must FORWARD the annotation to the runtime, which it does
+        #    not do by default -> node/install-containerd-cdi-annotations.sh
+        #
+        # Without the second one this annotation is silently ignored and NCCL says
+        # "MNNVL is available but not working on this system".
+        cdi.k8s.io/imex: "nvidia.com/imex-channel=all"
+    spec:
+      restartPolicy: Never
+      subdomain: nccl-2node   # with Indexed, hostname becomes <job>-<index>
+      runtimeClassName: nvidia
+      # hostNetwork keeps the NCCL bootstrap off the geneve overlay.
+      # ClusterFirstWithHostNet keeps cluster DNS working, which the rendezvous
+      # address depends on.
+      #
+      # NOTE: /dev/infiniband is deliberately NOT mounted. Those char devices
+      # cannot be opened without privileged (cgroup v2 device controller), so
+      # mounting them only produces ibv_open_device warnings. Intra-rack traffic
+      # goes over NVLink and needs no RDMA. Cross-RACK RDMA would need the RDMA
+      # device plugin or NVIDIA Network Operator -- not required by this gate.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        k8s-bootstrap.io/role: worker
+      affinity:
+        podAntiAffinity:
+          # requiredDuringScheduling, not preferred: if both ranks could share a
+          # node the result would prove nothing about multi-node NCCL.
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {app: nccl-2node}
+              topologyKey: kubernetes.io/hostname
+      volumes:
+        - name: shm
+          emptyDir: {medium: Memory, sizeLimit: 16Gi}
+      containers:
+        - name: nccl
+          image: nvcr.io/nvidia/pytorch:25.08-py3
+          resources:
+            limits:
+              nvidia.com/gpu: 4
+          volumeMounts:
+            - {name: shm,           mountPath: /dev/shm}
+          env:
+            - name: RANK_INDEX
+              # Block style and quoted: the ['...'] subscript cannot appear inside
+              # a YAML flow mapping.
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['batch.kubernetes.io/job-completion-index']"
+            - name: NODE_NAME
+              valueFrom: {fieldRef: {fieldPath: spec.nodeName}}
+            - name: MASTER_ADDR
+              value: nccl-2node-0.nccl-2node
+            - name: MASTER_PORT
+              value: "29500"
+            - name: NCCL_DEBUG
+              value: INFO
+            # INIT tells us the topology and whether MNNVL/IMEX was used; NET
+            # tells us which transport plugin won.
+            - name: NCCL_DEBUG_SUBSYS
+              value: INIT,NET,GRAPH,ENV
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              set -o pipefail
+              echo "=== rank ${RANK_INDEX} on ${NODE_NAME} ==="
+              echo "GPUs visible : $(nvidia-smi -L | grep -c '^GPU')"
+              echo "IMEX channels: $(ls /dev/nvidia-caps-imex-channels/ 2>/dev/null | tr '\n' ' ')  (injected via the cdi.k8s.io/imex annotation)"
+              echo "fabric state : $(nvidia-smi -q | awk '/^[[:space:]]+Fabric$/{f=1;next} f&&/^[[:space:]]+State[[:space:]]*:/{print $NF; f=0}' | sort -u | paste -sd,)"
+              echo "clique       : $(nvidia-smi -q | awk '/CliqueId/{print $NF}' | sort -u | paste -sd,)"
+              echo
+
+              cat > /tmp/ar.py <<'PY'
+              import json, os, time
+              import torch, torch.distributed as dist
+
+              rank = int(os.environ["RANK_INDEX"])
+              world = int(os.environ.get("WORLD", "2"))
+              local = torch.cuda.device_count()
+
+              dist.init_process_group("nccl", init_method="env://",
+                                      rank=rank, world_size=world)
+              torch.cuda.set_device(0)
+
+              # 512MiB of bf16, large enough that bandwidth dominates latency.
+              n = 512 * 1024 * 1024 // 2
+              x = torch.ones(n, dtype=torch.bfloat16, device="cuda")
+
+              for _ in range(5):
+                  dist.all_reduce(x)
+              torch.cuda.synchronize()
+              dist.barrier()
+
+              iters = 20
+              t0 = time.perf_counter()
+              for _ in range(iters):
+                  dist.all_reduce(x)
+              torch.cuda.synchronize()
+              dt = (time.perf_counter() - t0) / iters
+
+              nbytes = x.numel() * x.element_size()
+              # A ring all-reduce moves ~2(N-1)/N of the buffer per rank.
+              busbw = nbytes * 2 * (world - 1) / world / dt / 1e9
+              if rank == 0:
+                  print("PERF " + json.dumps({
+                      "bytes": nbytes,
+                      "seconds": round(dt, 6),
+                      "algbw_GBs": round(nbytes / dt / 1e9, 2),
+                      "busbw_GBs": round(busbw, 2),
+                      "local_gpus": local,
+                  }))
+
+              # Correctness on a FRESH tensor. Checking x here would be wrong: it has
+              # been summed in place 25 times by the warmup and timing loops, so it
+              # holds 2**25, not world_size. That mistake made a working MNNVL run
+              # (544 GB/s over P2P/MNNVL) report correct=False and fail the gate.
+              y = torch.ones(1024, dtype=torch.bfloat16, device="cuda")
+              dist.all_reduce(y)
+              ok = bool(torch.all(y == world).item())
+              print("RANK%d correct=%s host=%s gpus=%d" % (rank, ok, os.uname().nodename, local))
+              dist.destroy_process_group()
+              PY
+
+              python /tmp/ar.py 2>&1 | tee /tmp/out.txt
+              rc=$?
+
+              echo
+              echo "=== transport NCCL actually chose ==="
+              grep -iE "NCCL INFO (Channel|NVLS|MNNVL|via|NET/|Using network|Connected)" /tmp/out.txt \
+                | sed 's/^/  /' | sort -u | head -20 || true
+
+              # Report what we found so the gate's verdict is legible.
+              nvls=$(grep -ciE "NVLS|MNNVL" /tmp/out.txt || true)
+              ib=$(grep -ciE "NET/IB" /tmp/out.txt || true)
+              sock=$(grep -ciE "NET/Socket" /tmp/out.txt || true)
+              echo
+              echo "transport signals: NVLS/MNNVL=${nvls} NET/IB=${ib} NET/Socket=${sock}"
+              grep -q "correct=True" /tmp/out.txt || { echo "NCCL-GATE-FAILED: all_reduce incorrect"; exit 1; }
+              [ "$rc" = 0 ] || { echo "NCCL-GATE-FAILED: python exited ${rc}"; exit 1; }
+              # Assert the transport, not just success. Without this the gate would
+              # pass on a silent NET/Socket fallback, which "works" at a small
+              # fraction of NVLink bandwidth and would prove nothing about Path A.
+              grep -q "via P2P/MNNVL" /tmp/out.txt \
+                || { echo "NCCL-GATE-FAILED: collective did not run over MNNVL (check IMEX injection)"; exit 1; }
+              grep -q "MNNVL 1" /tmp/out.txt \
+                || { echo "NCCL-GATE-FAILED: NCCL did not enable MNNVL for this communicator"; exit 1; }
+              echo "NCCL-GATE-OK (multi-node NVLink over host-managed IMEX)"
