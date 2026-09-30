@@ -48,7 +48,7 @@ spec:
     - {name: rails, resourceClaimTemplateName: probe-one-rail}
   containers:
     - name: probe
-      image: quay.io/drkennetz/ktlo-labs:compass-dev0
+      image: quay.io/drkennetz/ktlo-labs@sha256:704f9976557a3e0fef6fe4ee29a06b6ccb468cf3e5e3ece5fbf1e472177d3ef2
       command: ["sleep", "infinity"]
       securityContext: {capabilities: {add: [IPC_LOCK]}}
       resources: {claims: [{name: rails}], limits: {memory: 4Gi}}
@@ -67,7 +67,7 @@ spec:
     - {name: rails, resourceClaimTemplateName: probe-one-rail}
   containers:
     - name: probe
-      image: quay.io/drkennetz/ktlo-labs:compass-dev0
+      image: quay.io/drkennetz/ktlo-labs@sha256:704f9976557a3e0fef6fe4ee29a06b6ccb468cf3e5e3ece5fbf1e472177d3ef2
       command: ["sleep", "infinity"]
       securityContext: {capabilities: {add: [IPC_LOCK]}}
       resources: {claims: [{name: rails}], limits: {memory: 4Gi}}
