@@ -22,7 +22,7 @@ spec:
     - name: watcher
       image: {{ d.image }}
       imagePullPolicy: IfNotPresent
-      args: [watcher, --interval, "1", --ib-root, /host-sys/class/infiniband, --dcgm-url, "http://{{ node_ip }}:9400/metrics"]
+      args: [watcher, --interval, "1", --ib-root, /host-sys/class/infiniband, --dcgm-url, "http://{{ node_ip }}:9400/metrics", --nvlink-url, "http://{{ node_ip }}:9600/metrics"]
       env:
         - {name: NODE_NAME, value: {{ node }}}
       volumeMounts:

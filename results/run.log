@@ -1,3 +1,7 @@
 2026-09-30T05:52:57Z run  e1-nvlink
 2026-09-30T05:53:40Z FAIL e1-nvlink: collect failed
 2026-09-30T05:54:17Z matrix pass complete: 0 result(s)
+2026-09-30T05:55:27Z run  e1-nvlink
+2026-09-30T05:56:09Z done e1-nvlink in 42s: PERF {"bytes": 8589934592, "size": "8GiB", "iters": 5, "mean_s": 0.017995, "algbw_GBs": 477.358, "busbw_GBs": 835.376, "spread_pct": 0.04, "slowest_rank": 4, "c
+2026-09-30T05:56:45Z matrix pass complete: 1 result(s)
+2026-09-30T05:58:04Z run  e1-rdma

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-MONOTONIC_SOURCES = {"ib_counter", "ib_hw_counter", "ethtool"}
+MONOTONIC_SOURCES = {"ib_counter", "ib_hw_counter", "ethtool", "nvlink"}
 
 
 def parse_counters_csv(path: str) -> pd.DataFrame:

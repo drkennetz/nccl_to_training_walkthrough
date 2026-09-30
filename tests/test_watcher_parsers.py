@@ -33,3 +33,13 @@ def test_sample_once_rows(sysfs_ib):
     metrics = {(r.source, r.metric) for r in rows}
     assert ("ib_counter", "port_xmit_data") in metrics and ("ib_hw_counter", "out_of_sequence") in metrics
     assert rows[0].csv().startswith("2026-09-30T00:00:00Z,node1,ib_counter,rdma_vf_rail0,")
+
+
+def test_parse_nvlink_exposition_sums_links_in_bytes():
+    text = 'nvlink_data_tx_kib_total{gpu="0",hostname="h",link="0"} 1024\nnvlink_data_tx_kib_total{gpu="0",hostname="h",link="1"} 1024\nnvlink_data_rx_kib_total{gpu="1",hostname="h",link="0"} 3\n'
+    rows = watcher.parse_nvlink_exposition(text)
+    assert ("gpu0", "nvlink_tx_bytes", 2 * 1024 * 1024.0) in rows and (
+        "gpu1",
+        "nvlink_rx_bytes",
+        3 * 1024.0,
+    ) in rows

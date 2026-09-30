@@ -172,6 +172,35 @@ def dcgm_scrape(url: str, timeout: float = 2.0) -> list[tuple[str, str, float]]:
         return []
 
 
+NVLINK_FIELDS = {"nvlink_data_tx_kib_total": "nvlink_tx_bytes", "nvlink_data_rx_kib_total": "nvlink_rx_bytes"}
+
+
+def parse_nvlink_exposition(text: str) -> list[tuple[str, str, float]]:
+    """The host NVLink exporter (:9600): per-GPU, per-link KiB counters -> (gpuN, metric, bytes) summed over links."""
+    acc: dict[tuple[str, str], float] = {}
+    for line in text.splitlines():
+        if line.startswith("#"):
+            continue
+        m = _PROM_LINE.match(line)
+        if not m or m.group("name") not in NVLINK_FIELDS:
+            continue
+        labels = dict(_LABEL.findall(m.group("labels")))
+        try:
+            key = (f"gpu{labels.get('gpu', '?')}", NVLINK_FIELDS[m.group("name")])
+            acc[key] = acc.get(key, 0.0) + float(m.group("value")) * 1024.0
+        except ValueError:
+            continue
+    return [(g, met, v) for (g, met), v in sorted(acc.items())]
+
+
+def nvlink_scrape(url: str, timeout: float = 2.0) -> list[tuple[str, str, float]]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - local exporter
+            return parse_nvlink_exposition(resp.read().decode("utf-8", "replace"))
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def dcgmi_sample() -> list[tuple[str, str, float]]:
     if not shutil.which("dcgmi"):
         return []
@@ -207,6 +236,7 @@ class WatcherConfig:
     netdevs: list[str]
     dcgm_url: str
     ib_root: str = "/sys/class/infiniband"
+    nvlink_url: str = ""
 
 
 def sample_once(cfg: WatcherConfig, ts: str | None = None) -> list[CounterRow]:
@@ -225,6 +255,8 @@ def sample_once(cfg: WatcherConfig, ts: str | None = None) -> list[CounterRow]:
         dcgm = dcgmi_sample()
     for gpu, metric, val in dcgm:
         rows.append(CounterRow(ts, cfg.node, "dcgm", gpu, metric, val))
+    for gpu, metric, val in nvlink_scrape(cfg.nvlink_url) if cfg.nvlink_url else []:
+        rows.append(CounterRow(ts, cfg.node, "nvlink", gpu, metric, val))  # monotonic byte counters
     return rows
 
 
@@ -239,11 +271,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--netdevs", default="", help="comma list of netdevs for ethtool -S (default: none)")
     ap.add_argument("--dcgm-url", default=os.environ.get("DCGM_URL", ""))
     ap.add_argument("--ib-root", default="/sys/class/infiniband")
+    ap.add_argument(
+        "--nvlink-url",
+        default=os.environ.get("NVLINK_URL", ""),
+        help="host NVLink exporter, e.g. http://<node>:9600/metrics",
+    )
     a = ap.parse_args(argv)
     devs = [d for d in a.devs.split(",") if d] or sorted(
         d for d in (os.listdir(a.ib_root) if os.path.isdir(a.ib_root) else []) if d.startswith("rdma_vf_rail")
     )
-    cfg = WatcherConfig(a.node, devs, [n for n in a.netdevs.split(",") if n], a.dcgm_url, a.ib_root)
+    cfg = WatcherConfig(
+        a.node, devs, [n for n in a.netdevs.split(",") if n], a.dcgm_url, a.ib_root, a.nvlink_url
+    )
     print("ts_iso,node,source,device,metric,value", flush=True)
     t_end = time.time() + a.duration if a.duration else float("inf")
     while time.time() < t_end:
