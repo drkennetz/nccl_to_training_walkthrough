@@ -74,3 +74,10 @@ experiments:
   - {id: e5-sock-nthreads4, experiment: E5, entrypoint: allreduce, transport: tcp, nnodes: 2, args: [--sizes, "16Mi,512Mi,4Gi"], env: {NCCL_SOCKET_NTHREADS: "4", NCCL_NSOCKS_PERTHREAD: "4"}}
   # communication frequency on the workload: fewer, larger gradient buckets over the rails (twin of e3-g8-rdma)
   - {id: e5-ddp-bucket200, experiment: E5, entrypoint: ddp, transport: rdma, nnodes: 2, args: [--bucket-cap-mb, "200"]}
+  # counter windows: the 1 Hz watcher cannot resolve a 90 ms timed phase, so these repeat one
+  # 4 GiB all-reduce for ~10 s per cell purely to read the rails, NVLink and PCIe counters under load
+  - {id: e5-counters-nvlink,   experiment: E5, entrypoint: allreduce, transport: nvlink, nnodes: 2, label: counters, args: [--sizes, "4Gi", --iters, "600", --warmup, "10"]}
+  - {id: e5-counters-rdma,     experiment: E5, entrypoint: allreduce, transport: rdma,   nnodes: 2, label: counters, args: [--sizes, "4Gi", --iters, "500", --warmup, "10"], env: {NCCL_IB_QPS_PER_CONNECTION: "1"}}
+  - {id: e5-counters-rdma-qps4, experiment: E5, entrypoint: allreduce, transport: rdma,  nnodes: 2, label: counters, args: [--sizes, "4Gi", --iters, "400", --warmup, "10"], env: {NCCL_IB_QPS_PER_CONNECTION: "4", NCCL_IB_SPLIT_DATA_ON_QPS: "1"}}
+  - {id: e5-counters-gdr-off,  experiment: E5, entrypoint: allreduce, transport: rdma,   nnodes: 2, label: counters, args: [--sizes, "4Gi", --iters, "300", --warmup, "10"], env: {NCCL_NET_GDR_LEVEL: "0", NCCL_NET_GDR_C2C: "0"}}
+  - {id: e5-counters-rails1,   experiment: E5, entrypoint: allreduce, transport: rdma, rails: 1, nnodes: 2, label: counters, args: [--sizes, "4Gi", --iters, "150", --warmup, "5"]}

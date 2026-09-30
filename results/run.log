@@ -79,3 +79,23 @@
 2026-09-30T07:00:39Z run  e4-qps4-r4
 2026-09-30T07:01:27Z done e4-qps4-r4 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.025919, "algbw_GBs": 165.709, "busbw_GBs": 289.991, "spread_pct": 0.05, "slowest_rank": 5, "c
 2026-09-30T07:02:08Z matrix pass complete: 29 result(s)
+2026-09-30T07:02:46Z run  e5-buffsize16m
+2026-09-30T07:03:34Z done e5-buffsize16m in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.019138, "algbw_GBs": 224.42, "busbw_GBs": 392.734, "spread_pct": 0.03, "slowest_rank": 1, "co
+2026-09-30T07:04:15Z run  e5-buffsize4m
+2026-09-30T07:05:03Z done e5-buffsize4m in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.017924, "algbw_GBs": 239.616, "busbw_GBs": 419.329, "spread_pct": 0.06, "slowest_rank": 1, "c
+2026-09-30T07:05:44Z run  e5-gdr-off
+2026-09-30T07:06:32Z done e5-gdr-off in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.030374, "algbw_GBs": 141.404, "busbw_GBs": 247.457, "spread_pct": 0.34, "slowest_rank": 1, "c
+2026-09-30T07:07:13Z matrix pass complete: 32 result(s)
+2026-09-30T07:08:05Z run  e5-algo-nvls
+2026-09-30T07:08:48Z done e5-algo-nvls in 43s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.00906, "algbw_GBs": 474.052, "busbw_GBs": 829.591, "spread_pct": 0.6, "slowest_rank": 1, "cor
+2026-09-30T07:09:29Z run  e5-algo-ring
+2026-09-30T07:10:12Z done e5-algo-ring in 43s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.011062, "algbw_GBs": 388.255, "busbw_GBs": 679.446, "spread_pct": 0.17, "slowest_rank": 1, "c
+2026-09-30T07:10:53Z run  e5-algo-tree
+2026-09-30T07:11:31Z FAIL e5-algo-tree: job failed (Job has reached the specified backoff limit)
+2026-09-30T07:12:12Z matrix pass complete: 34 result(s)
+2026-09-30T07:12:12Z run  e5-sock-nthreads4
+2026-09-30T07:13:01Z done e5-sock-nthreads4 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.255485, "algbw_GBs": 16.811, "busbw_GBs": 29.419, "spread_pct": 0.31, "slowest_rank": 3, "cor
+2026-09-30T07:13:41Z matrix pass complete: 35 result(s)
+2026-09-30T07:13:42Z run  e5-ddp-bucket200
+2026-09-30T07:14:50Z done e5-ddp-bucket200 in 68s: PERF {"world": 8, "samples_per_s": 2768.76, "step_s": 0.0231, "comm_fraction": 0.324, "loss_first": 10.833297729492188, "loss_last": 10.841232299804688}
+2026-09-30T07:15:31Z matrix pass complete: 36 result(s)
