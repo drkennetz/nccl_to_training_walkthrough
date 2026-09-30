@@ -1,0 +1,127 @@
+=== e1-rdma node_rank=0 on gpu-3uwoq-6g3ya-1 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  rdma_vf_rail0@if28 UNKNOWN        fe80::2f1:b200:195:d2ec/64 
+  rdma_vf_rail1@if29 UNKNOWN        fe80::205:9d00:123:eae0/64 
+  rdma_vf_rail2@if30 UNKNOWN        fe80::2d7:7600:1f0:b9f1/64 
+  rdma_vf_rail3@if31 UNKNOWN        fe80::2c8:8500:135:d06e/64 
+  eth0@if97        UP             10.42.1.9/32 fe80::648f:ddff:feb6:3cdd/64 
+  rdma_vf_rail0@if28 UNKNOWN        fdcd:8300:a1af:70ed:2f1:b200:195:d2ec/64 
+  rdma_vf_rail1@if29 UNKNOWN        fdcd:8300:a2af:70ed:205:9d00:123:eae0/64 
+  rdma_vf_rail2@if30 UNKNOWN        fdcd:8300:a3af:70ed:2d7:7600:1f0:b9f1/64 
+  rdma_vf_rail3@if31 UNKNOWN        fdcd:8300:a4af:70ed:2c8:8500:135:d06e/64 
+rdma_vf_rail0:
+  [4] fe80:0000:0000:0000:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        link-local
+  [5] fe80:0000:0000:0000:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        link-local
+  [6] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  IB/RoCE v1   rdma_vf_rail0        global
+  [7] fdcd:8300:a1af:70ed:02f1:b200:0195:d2ec  RoCE v2      rdma_vf_rail0        global <-- chosen
+rdma_vf_rail1:
+  [4] fe80:0000:0000:0000:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        link-local
+  [5] fe80:0000:0000:0000:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        link-local
+  [6] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  IB/RoCE v1   rdma_vf_rail1        global
+  [7] fdcd:8300:a2af:70ed:0205:9d00:0123:eae0  RoCE v2      rdma_vf_rail1        global <-- chosen
+rdma_vf_rail2:
+  [4] fe80:0000:0000:0000:02d7:7600:01f0:b9f1  IB/RoCE v1   rdma_vf_rail2        link-local
+  [5] fe80:0000:0000:0000:02d7:7600:01f0:b9f1  RoCE v2      rdma_vf_rail2        link-local
+  [6] fdcd:8300:a3af:70ed:02d7:7600:01f0:b9f1  IB/RoCE v1   rdma_vf_rail2        global
+  [7] fdcd:8300:a3af:70ed:02d7:7600:01f0:b9f1  RoCE v2      rdma_vf_rail2        global <-- chosen
+rdma_vf_rail3:
+  [4] fe80:0000:0000:0000:02c8:8500:0135:d06e  IB/RoCE v1   rdma_vf_rail3        link-local
+  [5] fe80:0000:0000:0000:02c8:8500:0135:d06e  RoCE v2      rdma_vf_rail3        link-local
+  [6] fdcd:8300:a4af:70ed:02c8:8500:0135:d06e  IB/RoCE v1   rdma_vf_rail3        global
+  [7] fdcd:8300:a4af:70ed:02c8:8500:0135:d06e  RoCE v2      rdma_vf_rail3        global <-- chosen
+NCCL_IB_GID_INDEX=7  consistent=True
+NCCL_IB_HCA==rdma_vf_rail0,rdma_vf_rail1,rdma_vf_rail2,rdma_vf_rail3 NCCL_IB_GID_INDEX=7
+W0930 06:11:17.966000 1 torch/distributed/run.py:766] 
+W0930 06:11:17.966000 1 torch/distributed/run.py:766] *****************************************
+W0930 06:11:17.966000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 06:11:17.966000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-1MiB", "event": "start", "t": 1790748704.144955}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-1MiB", "event": "end", "t": 1790748705.4958935}
+PHASE {"name": "timed-1MiB", "event": "start", "t": 1790748705.4960482}
+PHASE {"name": "timed-1MiB", "event": "end", "t": 1790748705.5053763}
+PERF {"bytes": 1048576, "size": "1MiB", "iters": 100, "mean_s": 9e-05, "algbw_GBs": 11.606, "busbw_GBs": 20.311, "spread_pct": 0.92, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-2MiB", "event": "start", "t": 1790748707.763549}
+PHASE {"name": "warmup-2MiB", "event": "end", "t": 1790748708.0822997}
+PHASE {"name": "timed-2MiB", "event": "start", "t": 1790748708.0826566}
+PHASE {"name": "timed-2MiB", "event": "end", "t": 1790748708.10391}
+PERF {"bytes": 2097152, "size": "2MiB", "iters": 100, "mean_s": 0.00021, "algbw_GBs": 9.974, "busbw_GBs": 17.454, "spread_pct": 0.73, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-4MiB", "event": "start", "t": 1790748708.108004}
+PHASE {"name": "warmup-4MiB", "event": "end", "t": 1790748708.1109204}
+PHASE {"name": "timed-4MiB", "event": "start", "t": 1790748708.111223}
+PHASE {"name": "timed-4MiB", "event": "end", "t": 1790748708.1257865}
+PERF {"bytes": 4194304, "size": "4MiB", "iters": 100, "mean_s": 0.000143, "algbw_GBs": 29.329, "busbw_GBs": 51.326, "spread_pct": 1.14, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-8MiB", "event": "start", "t": 1790748708.1292572}
+PHASE {"name": "warmup-8MiB", "event": "end", "t": 1790748708.1325922}
+PHASE {"name": "timed-8MiB", "event": "start", "t": 1790748708.1328387}
+PHASE {"name": "timed-8MiB", "event": "end", "t": 1790748708.1491184}
+PERF {"bytes": 8388608, "size": "8MiB", "iters": 100, "mean_s": 0.00016, "algbw_GBs": 52.388, "busbw_GBs": 91.68, "spread_pct": 0.63, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-16MiB", "event": "start", "t": 1790748708.1525965}
+PHASE {"name": "warmup-16MiB", "event": "end", "t": 1790748708.157117}
+PHASE {"name": "timed-16MiB", "event": "start", "t": 1790748708.1573563}
+PHASE {"name": "timed-16MiB", "event": "end", "t": 1790748708.17981}
+PERF {"bytes": 16777216, "size": "16MiB", "iters": 100, "mean_s": 0.000222, "algbw_GBs": 75.63, "busbw_GBs": 132.352, "spread_pct": 0.42, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-32MiB", "event": "start", "t": 1790748708.1835272}
+PHASE {"name": "warmup-32MiB", "event": "end", "t": 1790748708.1920989}
+PHASE {"name": "timed-32MiB", "event": "start", "t": 1790748708.1923034}
+PHASE {"name": "timed-32MiB", "event": "end", "t": 1790748708.2117212}
+PERF {"bytes": 33554432, "size": "32MiB", "iters": 50, "mean_s": 0.000378, "algbw_GBs": 88.709, "busbw_GBs": 155.242, "spread_pct": 14.93, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-64MiB", "event": "start", "t": 1790748708.2150004}
+PHASE {"name": "warmup-64MiB", "event": "end", "t": 1790748708.2236664}
+PHASE {"name": "timed-64MiB", "event": "start", "t": 1790748708.2238057}
+PHASE {"name": "timed-64MiB", "event": "end", "t": 1790748708.2443852}
+PERF {"bytes": 67108864, "size": "64MiB", "iters": 50, "mean_s": 0.000408, "algbw_GBs": 164.282, "busbw_GBs": 287.494, "spread_pct": 0.33, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-128MiB", "event": "start", "t": 1790748708.2476447}
+PHASE {"name": "warmup-128MiB", "event": "end", "t": 1790748708.2607887}
+PHASE {"name": "timed-128MiB", "event": "start", "t": 1790748708.2609344}
+PHASE {"name": "timed-128MiB", "event": "end", "t": 1790748708.2935135}
+PERF {"bytes": 134217728, "size": "128MiB", "iters": 50, "mean_s": 0.000648, "algbw_GBs": 206.979, "busbw_GBs": 362.213, "spread_pct": 0.22, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-256MiB", "event": "start", "t": 1790748708.2989287}
+PHASE {"name": "warmup-256MiB", "event": "end", "t": 1790748708.3107412}
+PHASE {"name": "timed-256MiB", "event": "start", "t": 1790748708.3108492}
+PHASE {"name": "timed-256MiB", "event": "end", "t": 1790748708.3341181}
+PERF {"bytes": 268435456, "size": "256MiB", "iters": 20, "mean_s": 0.001159, "algbw_GBs": 231.692, "busbw_GBs": 405.461, "spread_pct": 0.5, "slowest_rank": 2, "correct": true}
+PHASE {"name": "warmup-512MiB", "event": "start", "t": 1790748708.3375397}
+PHASE {"name": "warmup-512MiB", "event": "end", "t": 1790748708.3596883}
+PHASE {"name": "timed-512MiB", "event": "start", "t": 1790748708.3597696}
+PHASE {"name": "timed-512MiB", "event": "end", "t": 1790748708.4054585}
+PERF {"bytes": 536870912, "size": "512MiB", "iters": 20, "mean_s": 0.002279, "algbw_GBs": 235.568, "busbw_GBs": 412.243, "spread_pct": 0.25, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-1GiB", "event": "start", "t": 1790748708.4088783}
+PHASE {"name": "warmup-1GiB", "event": "end", "t": 1790748708.4537287}
+PHASE {"name": "timed-1GiB", "event": "start", "t": 1790748708.4538043}
+PHASE {"name": "timed-1GiB", "event": "end", "t": 1790748708.5302854}
+PERF {"bytes": 1073741824, "size": "1GiB", "iters": 10, "mean_s": 0.007645, "algbw_GBs": 140.442, "busbw_GBs": 245.773, "spread_pct": 0.09, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-2GiB", "event": "start", "t": 1790748708.5338557}
+PHASE {"name": "warmup-2GiB", "event": "end", "t": 1790748708.6232157}
+PHASE {"name": "timed-2GiB", "event": "start", "t": 1790748708.6232812}
+PHASE {"name": "timed-2GiB", "event": "end", "t": 1790748708.7132523}
+PERF {"bytes": 2147483648, "size": "2GiB", "iters": 10, "mean_s": 0.008989, "algbw_GBs": 238.9, "busbw_GBs": 418.074, "spread_pct": 0.11, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790748708.7170348}
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790748708.774279}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790748708.7743294}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790748708.8628411}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.017699, "algbw_GBs": 242.664, "busbw_GBs": 424.662, "spread_pct": 0.07, "slowest_rank": 5, "correct": true}
+PHASE {"name": "warmup-8GiB", "event": "start", "t": 1790748708.8674393}
+PHASE {"name": "warmup-8GiB", "event": "end", "t": 1790748708.9748845}
+PHASE {"name": "timed-8GiB", "event": "start", "t": 1790748708.9749281}
+PHASE {"name": "timed-8GiB", "event": "end", "t": 1790748709.1699717}
+PERF {"bytes": 8589934592, "size": "8GiB", "iters": 5, "mean_s": 0.039, "algbw_GBs": 220.257, "busbw_GBs": 385.45, "spread_pct": 0.02, "slowest_rank": 1, "correct": true}
+RANK2 host=gpu-3uwoq-6g3ya-1 local_rank=2 done
+RANK3 host=gpu-3uwoq-6g3ya-1 local_rank=3 done
+RANK1 host=gpu-3uwoq-6g3ya-1 local_rank=1 done
+RANK0 host=gpu-3uwoq-6g3ya-1 local_rank=0 done
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 640, "net_ib_gdr_channels": 640, "net_socket_channels": 0, "p2p_channels": 448, "shm_channels": 0, "ranks_reporting": 8, "path": "rdma_gdr", "network": "IBext_v10", "mnnvl": "0"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e1-rdma/result.json
