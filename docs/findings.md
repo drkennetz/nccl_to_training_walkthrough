@@ -36,7 +36,7 @@ spread at 32 MiB. Both sit at NCCL protocol/algorithm switch points and are repe
 | RDMA bus bandwidth scales with rails: **96 / 207 / 364 GB/s** at 1 / 2 / 4 rails (4 GiB) | `e2_rails.csv` |
 | The bytes on the wire equal the theoretical minimum for a two-node all-reduce (S per direction): one rail carried **411 Gb/s** for algbw 50 GB/s; four rails **~482 Gb/s each** for algbw 235 GB/s | `e5_counters.csv`; sysfs `port_xmit_data` ×4 verified byte-for-byte against `ethtool tx_vport_rdma_unicast_bytes` |
 | Therefore a rail is **not** a 200 Gb/s link: 411 Gb/s cannot cross one. The rail is a 4-plane 800 Gb/s port, and it ran at **51 % (1 rail) to 60 % (4 rails)** of that | `rdma_p0..p3_rail<N>` netdevs, 200 Gb/s each |
-| GPUDirect off (`NCCL_NET_GDR_LEVEL=0`): algbw falls from ~235 to **145 GB/s**; the GPUs' PCIe RX/TX counters, flat with GDR on, come alive (host bounce) | `e5_sensitivity.csv`, `e5_counters.csv` (`pcie_rx_GBps_total`, `pcie_tx_GBps_total`) |
+| GPUDirect off (`NCCL_NET_GDR_LEVEL=0`): algbw falls from ~235 to **145 GB/s** while the rails carry the same bytes; the GPU-side PCIe counters stay flat in both cases — on GB300 the GPU reaches host memory over C2C, so the host bounce costs time, not GPU PCIe bytes | `e5_sensitivity.csv`, `e5_counters.csv` |
 | The NVLink run leaves the rails idle and moves ~240 GB/s per GPU on NVLink instead | `e5_counters.csv` (`nvlink_tx_GBps_total` vs `rail_xmit_Gbps_total`) |
 | No congestion signal on the rails during any window: CNPs, ECN marks, out-of-sequence, sequence errors and ACK timeouts stay at zero per second | `e5_counters.csv` |
 
@@ -85,7 +85,7 @@ on one tray (no NIC is involved); over two trays the transport is the difference
 | knob | result |
 |---|---|
 | `NCCL_BUFFSIZE` 4 MiB / 16 MiB (default 4 MiB) | within noise of the baseline at every size |
-| GPUDirect off | −38 % at 4 GiB; the GPUs' PCIe RX/TX counters, flat with GDR on, come alive (host bounce) |
+| GPUDirect off | −38 % at 4 GiB; same bytes on the rails, 1.6× the time: the host bounce over C2C is pure latency/copy cost |
 | `NCCL_ALGO=NVLS` vs `Ring` on NVLink | NVLS 474 vs Ring 388 GB/s algbw at 4 GiB — the NVSwitch reduction is what makes the NVLink curve keep climbing |
 | `NCCL_ALGO=Tree` | not a valid configuration: NCCL has no Tree implementation for all-gather (used by the topology exchange); recorded as a configuration result |
 | TCP with `NCCL_SOCKET_NTHREADS=4`, `NCCL_NSOCKS_PERTHREAD=4` | 16.8 vs 2.4 GB/s algbw — 7× on the socket path, still 14× below RDMA |

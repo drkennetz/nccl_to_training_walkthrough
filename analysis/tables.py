@@ -166,8 +166,12 @@ def counters_table(results: list[dict]) -> pd.DataFrame:
         if h.empty:
             continue
 
-        # one node's view (the rank-0 tray): per-rail figures are per rail, totals are per tray
-        node0 = sorted(h.node.unique())[0] if "node" in h.columns and len(h) else None
+        # one tray's view: per-rail figures are per rail, totals are per tray. Take the tray whose
+        # counters moved the most (an exporter on one tray may report stale NVLink values).
+        node0 = None
+        if "node" in h.columns and len(h):
+            act = h[h.metric.isin(["port_xmit_data", "nvlink_tx_bytes"])].groupby("node")["rate_per_s"].sum()
+            node0 = act.idxmax() if len(act) else sorted(h.node.unique())[0]
         hn = h[h.node == node0] if node0 is not None else h
 
         def m(metric, col="rate_per_s", agg="sum", _h=hn):

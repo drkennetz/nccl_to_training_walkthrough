@@ -28,22 +28,25 @@ sections:
   - title: "3 · Diagnosis: where accelerator time goes"
     chart: rails_vs_busbw
     bullets:
-      - "Evidence: rail port_xmit_data vs 200 Gb/s line rate per rail; NVLink TX/RX bytes; pause/CNP counters; per-rank spread and the slowest rank"
-      - "RDMA path scales with rails claimed (1 → 2 → 4): the NIC count, not the GPU, is the ceiling on that path"
-      - "Cross-tray NVLink is an order of magnitude above the four rails: the topology decides the transport, the transport decides the ceiling"
+      - "Evidence: bytes on the wire (port_xmit_data, verified against ethtool) equal the two-node minimum S per direction; one rail carried 411 Gb/s — so a rail is a 4-plane 800 Gb/s port, not the 200 Gb/s sysfs reports"
+      - "RDMA path scales with rails claimed (1 → 2 → 4) and each rail sits at ~55 % of 800 Gb/s; CNP/ECN/out-of-sequence counters flat; NIC and GPU at PCIe Gen6 x16 → not the wire, not congestion, not PCIe"
+      - "What remains: the per-rail injection path (one NCCL connection per GPU–NIC pair, GDR across the Grace socket over C2C) — a narrowed hypothesis, with the next experiment named (channels per NIC, GPU–NIC placement)"
+      - "Cross-tray NVLink at 835 GB/s is ~2× the four rails together: the topology decides the transport, the transport decides the ceiling"
     table: e2_rails
   - title: "4 · Optimization: NCCL_IB_QPS_PER_CONNECTION"
     chart: before_after_box
     bullets:
       - "Baseline: 1 QP per connection on the RDMA path"
-      - "Hypothesis (written before the run): a single QP per peer leaves rail bandwidth idle at large messages; more QPs spread the flow and raise busbw; trade-off is per-QP state and out-of-order handling (out_of_sequence, packet_seq_err)"
-      - "Change: QPS_PER_CONNECTION 1 → 2 → 4 with SPLIT_DATA_ON_QPS=1; 5 repeats each at 16 MiB / 512 MiB / 4 GiB"
-      - "Measurement and conclusion: see the table — a negative or null result is reported as such (Welch p-value per cell)"
+      - "Hypothesis (written before the run): a single QP per peer leaves rail bandwidth idle (rails at ~55 %); more QPs spread the flow and raise busbw; trade-off is per-QP state and out-of-order handling (out_of_sequence, packet_seq_err)"
+      - "Change: QPS_PER_CONNECTION 1 → 2 → 4 with SPLIT_DATA_ON_QPS=1; 5 repeats each at 16 MiB / 512 MiB / 4 GiB; nothing else touched"
+      - "Measurement: QPs=2 −4/−9/−8 %, QPs=4 −19/−32/−29 % (Welch p < 0.001 at every size for QPs=4); counter window at QPs=4: 338 Gb/s per rail vs 482, reordering and congestion counters still zero"
+      - "Conclusion — negative: the headroom is real but this knob cannot reach it; splitting messages across QPs shrinks each work request. Keep the default; the ceiling is on the injection side"
     table: e4_before_after
   - title: "5 · Sensitivity appendix"
     table: e5_sensitivity
     bullets:
-      - "GPUDirect off, buffer sizes, algorithms (Ring/Tree/NVLS), socket threads on the TCP path"
+      - "GPUDirect off (−38 %, same bytes on the wire, 1.6× the time), buffer sizes (noise), NVLS vs Ring on NVLink (474 vs 388 GB/s algbw), Tree invalid for the all-gather, socket threads (7× on TCP)"
+      - "DDP bucket 25 → 200 MiB over the rails: 2090 → 2769 samples/s (+32 %), comm fraction 91 % → 32 % — change how often you talk before how you talk"
   - title: "5 · Extending to production multi-node GPU systems"
     bullets:
       - "Same manifests scale by nnodes: one pod per tray, one claim per pod; rails per pod and GID discovery stay per-node decisions"
