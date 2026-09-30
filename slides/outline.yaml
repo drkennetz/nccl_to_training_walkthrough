@@ -39,6 +39,8 @@ sections:
   - Which path was actually used is read from NCCL's own connection log for every run, not guessed from the speed
   table: e1_size_vs_transport
   notes:
+  - 'Bridge from the architecture: we now have three ways to run the very same 8-GPU collective — NVLink, the RDMA rails, TCP. The brief''s first job is to measure distributed performance before explaining
+    anything, so this slide is the measurement: one all-reduce, one sweep of message sizes, three paths, and NCCL''s own log to prove which path each run took.'
   - 'Bus bandwidth is the standard way collective benchmarks report speed: bytes moved per second, adjusted so different numbers of GPUs are comparable. Higher is better.'
   - 'The shape of the curve: for a 1 MiB message the operation takes about 80 microseconds on either NVLink or RDMA — that time is handshakes and kernel launches, not data. As the message grows, the fixed
     cost is amortised and the curve flattens at the speed of the wire.'
@@ -50,6 +52,9 @@ sections:
   - That fixed cost is the reason a training step with many small gradient messages does not benefit from a faster wire — see the DDP bucket result later
   table: e1_small_latency
   notes:
+  - 'Bridge from the baseline: on the left of the previous curve all three paths collapsed to the same speed, which says the cost there is not bytes but a fixed cost per operation. To see that floor cleanly
+    we re-ran the sweep at small sizes, 4 KiB to 1 MiB, on the two fast paths. The number we get here — tens of microseconds per collective regardless of size — is what the training slide and the bucket-size
+    result are built on.'
   - 'This slide exists to make the diagnosis honest: below a few MiB the network bandwidth is irrelevant; what matters is how many operations you issue. It sets up the bucket-size finding.'
 - title: '2 · Scaling: the training workload from 1 to 8 GPUs'
   chart: scaling_efficiency
@@ -59,6 +64,9 @@ sections:
   - The 'comm' figure is how much of each step the GPU spends in communication kernels (from the PyTorch profiler); at this model size the gradient exchange is a large share of every step
   table: e3_scaling
   notes:
+  - 'Bridge from the small-message floor: a fixed cost per collective means a workload''s speed depends on how many collectives it issues per step as well as on how many bytes it moves. The brief asks for
+    a representative workload at two scales; DDP training is that workload, and at the default bucket size it issues about 19 all-reduces per step — exactly the regime where both the fixed cost and the
+    wire matter, so it is a fair test of what the baseline curve predicts.'
   - 'Lead with the bucket size. DDP does not all-reduce each gradient separately: it packs gradients into buckets and launches one all-reduce per bucket as the backward pass fills them. The bucket cap here
     is PyTorch''s default, 25 MiB. The model has 124M parameters kept in fp32 under autocast, so about 474 MiB of gradients per step, which is roughly 19 all-reduces of 25 MiB each.'
   - 'Why that size makes the measurement useful: 25 MiB sits at the knee of the message-size curve from the baseline slide. At that size an all-reduce is already bandwidth-sensitive (NVLink and RDMA are
@@ -85,6 +93,9 @@ sections:
     per NIC
   table: e2_rails
   notes:
+  - 'Bridge from scaling: the 8-GPU run lost 23 points of efficiency moving from NVLink to the rails. The tempting story is ''the network is slow''. The brief tells us not to assume that, so this slide
+    takes the RDMA path apart on its own: the same collective with 1, 2 and 4 rails, and a set of sustained runs made only to read the NIC, NVLink and PCIe counters while the collective is in flight. Evidence
+    first, then the diagnosis.'
   - 'How we know the rails are 800 Gb/s: we watched the NIC''s transmitted-bytes counter during a sustained all-reduce and cross-checked it against ethtool''s byte counter (they agree to the byte). One
     rail moved 411 Gb/s. The physical NIC exposes four 200 Gb/s ports per rail, and the virtual function aggregates them.'
   - 'How we know it is not congestion: the same watcher reads the RoCE congestion-control counters (CNPs sent and handled, ECN-marked packets) and the reliability counters (out-of-sequence, sequence errors,
@@ -104,6 +115,9 @@ sections:
     side instead. A negative result, reported as one'
   table: e4_before_after
   notes:
+  - 'Bridge from the diagnosis: it left us with rails at about 55 % of their capacity, no congestion, no PCIe limit, and one NCCL connection per GPU–NIC pair. If the wire has headroom and each connection
+    is a single flow, the obvious single change is to give each connection more queue pairs. That is the hypothesis we wrote down before running anything, and it is the one controlled change the brief asks
+    for.'
   - A queue pair is the RDMA equivalent of a connection between two NICs. NCCL opens one per pair of communicating GPUs by default. The knob lets it open several and stripe a message across them; it is
     a common tuning recommendation on large fabrics where a single flow cannot fill a link because of how switches spread traffic.
   - 'Here there is one switch hop between matching rails, so striping buys nothing and costs overhead. The counters make the explanation concrete: fewer bytes per second on each rail, no errors, no congestion
@@ -119,6 +133,9 @@ sections:
   - 'DDP gradient buckets 25 → 200 MiB over the rails: 2090 → 2769 samples/s (+32 %); communication share of the step falls from 91 % to 32 %. On a slower interconnect, change how often you communicate
     before changing how'
   notes:
+  - 'Bridge from the optimization: the queue-pair change went the wrong way, so the RDMA gap is not the transport''s flow count. This slide asks what else could be moving the number — the GPUDirect path
+    into the NIC, NCCL''s buffers and algorithm choice, the TCP path''s threading — and returns to the small-message finding: if the fixed cost per collective is a large share, issue fewer collectives.
+    That is the DDP bucket change, and it is the one that helped.'
   - 'The bucket-size result is the practical takeaway for a training team: fewer, larger all-reduces amortise the fixed cost we saw on the small-message slide. It recovers most of the gap between the RDMA
     and NVLink runs without touching the network.'
   - 'The Tree entry is kept on purpose: the exercise asks for honest reporting, and ''that configuration is invalid'' is a finding too.'
@@ -131,5 +148,7 @@ sections:
   - Floors are calibrated per rank count and message size, because bus bandwidth is not constant across either — the sweep here is the reference shape
   - 'The whole environment is reproducible from the repository: bootstrap, manifests, image build, results, analysis and this deck'
   notes:
+  - 'Bridge from the results: everything so far was two trays. What carries to a production system is the method — claim devices explicitly, prove the transport from NCCL''s log, read the counters behind
+    every number, calibrate floors per width and size — and the specific findings about where the fast path exists and how to size the workload''s communication to the path it gets.'
   - 'If asked about scheduling at scale: add a gang scheduler (Kueue) so multi-pod Jobs start together, and label nodes with their NVLink domain and fabric block so claims land where the fast path exists.
     Both are outside the two-tray scope but the manifests already assume one pod per tray and per-pod claims.'
