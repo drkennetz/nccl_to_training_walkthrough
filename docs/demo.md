@@ -46,7 +46,7 @@ different trays talking over NVLink through the NVSwitch fabric, enabled by the 
 cd ~/dkennetz/compass_takehome
 export KUBECONFIG=~/.local/state/k8s-bootstrap/polite-possum/kubeconfig
 source scripts/creds.sh                                   # exports the Quay and Grafana tokens; prints nothing
-export DRANET_SRC=$HOME/src/dranet                        # git clone -b slaac-addressing https://github.com/dkennetzoracle/dranet $DRANET_SRC
+export DRANET_SRC=$HOME/dkennetz/dranet                    # a clone of dkennetzoracle/dranet, branch slaac-addressing (commit c70a33c is what the image was built from)
 cat .image-digest                                          # the exact image the committed results were produced with
 ```
 

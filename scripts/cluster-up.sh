@@ -12,7 +12,7 @@
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd); REPO=$(cd "$HERE/.." && pwd); BOOT="$REPO/infra/k8s_bootstrap"
 RACK=""; WORKERS=2; LEASE="3-00:00:00"; CREDS_DIR="${CREDS_DIR:-$HOME/dkennetz}"
-DRANET_SRC="${DRANET_SRC:-}"   # a checkout of dkennetzoracle/dranet@slaac-addressing (for the chart)
+DRANET_SRC="${DRANET_SRC:-$HOME/dkennetz/dranet}"   # a checkout of dkennetzoracle/dranet@slaac-addressing (for the chart)
 while [[ $# -gt 0 ]]; do case "$1" in
   --rack) RACK="$2"; shift ;; --workers) WORKERS="$2"; shift ;; --lease-time) LEASE="$2"; shift ;;
   --dranet-src) DRANET_SRC="$2"; shift ;; -h|--help) sed -n 2,12p "$0"; exit 0 ;; *) echo "unknown $1" >&2; exit 2 ;; esac; shift; done
