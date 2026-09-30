@@ -6,6 +6,22 @@ before/after evidence (Baseline → Hypothesis → Change → Measurement → Co
 extends to multi-node production. This runbook is organised in that order. Every number quoted is in
 `results/SUMMARY.md` and comes from a committed `result.json`.
 
+### How the runbook maps onto the deck (`slides/compass.pptx`, 10 slides, speaker notes on each)
+
+| minutes | runbook section | slide(s) | what is on screen |
+|---|---|---|---|
+| 0–2 | opening | 1 (title) | the deck |
+| 2–9 | §1 architecture, while the cluster comes up | 2 (architecture diagram), 3 (DRA, dranet, Cilium) | deck + a terminal running the bring-up |
+| 9–11 | §2 the probe and the GID index | 3 (its last bullet) | terminal only: `scripts/demo-gid.sh` |
+| 11–17 | §3 baseline, small messages, scaling | 4, 5, 6 | deck; a terminal running the three live cells in the background |
+| 17–21 | §3 diagnosis | 7 | deck + the dashboard |
+| 21–25 | §4 the optimization and the other knobs | 8, 9 | deck |
+| 25–28 | §5 dashboard walkthrough | 7 again | the dashboard |
+| 28–30 | §6 production and close | 10 | deck |
+
+Each slide's notes open with a "Bridge from …" paragraph that says how the previous experiment led to
+this one; read those bridges aloud when moving between slides, they are the narrative.
+
 Two ways to run it. **Live**: bring the cluster up during the architecture section, run three short
 benchmark cells, and show the counters moving on the dashboard. **Recorded**: use the committed
 results and the deck (`slides/compass.pptx`, which has speaker notes on every slide). Rehearse live once
@@ -37,7 +53,7 @@ manifest check, Terraform validation, analysis smoke run, image build and publis
 Checklist: `(cd infra/k8s_bootstrap && bin/k8s-status)` lists an idle rack; the deck opens; you can
 `less results/SUMMARY.md`. If a cluster is already up from earlier, start at section 2.
 
-## 1. Architecture and design choices — talk while the cluster comes up (about 7 minutes)
+## 1. Architecture and design choices — talk while the cluster comes up (about 7 minutes) — slides 2 and 3
 
 Run these one after another; each finishes before the next starts. Times were measured on 2026-09-30.
 
@@ -64,13 +80,16 @@ command with the same timings, and ends with the probe from section 2.
 
 ### What to say while it runs
 
-**The hardware and the three networks.** Two GB300 trays; each has four GPUs joined by NVLink, four
+Slide 2 is the architecture diagram; its notes carry the four sentences to say about it. Slide 3 is
+DRA, dranet and Cilium. The paragraphs below expand both for questions.
+
+**The hardware and the three networks** (slide 2). Two GB300 trays; each has four GPUs joined by NVLink, four
 ConnectX-8 rails (one per GPU), and two Grace CPUs. The two trays are in the same NVLink domain, so
 GPUs in different trays can talk over NVLink as well as over the rails. That gives us three ways to
 run the same collective: NVLink, RDMA over the rails, and TCP. The brief says not to assume the network
 is the problem; measuring all three paths is how we avoid assuming.
 
-**Why Kubernetes, and why a two-tray lease.** The brief cares about reproducibility, not the
+**Why Kubernetes, and why a two-tray lease** (slide 2 notes). The brief cares about reproducibility, not the
 scheduler. Kubernetes gives us declarative manifests that are committed and drift-checked in CI, a
 scheduler that allocates GPUs and NICs as devices, and one container image that CI builds and
 publishes to ghcr.io. Two trays are enough for every question asked (two ranks, two nodes, NVLink
@@ -78,7 +97,7 @@ versus RDMA), so we leased two workers rather than a rack. The trays are borrowe
 pool, which is why the bootstrap snapshots every node before touching it and proves it identical after
 teardown — nothing is installed in system paths, and no host daemon is changed.
 
-**Why DRA rather than the device plugin.** With the device plugin a node advertises an opaque count
+**Why DRA rather than the device plugin** (slide 3, first three bullets). With the device plugin a node advertises an opaque count
 (`nvidia.com/gpu: 4`); a pod can ask for a number of GPUs and nothing else. With DRA the cluster
 publishes every device with its attributes and a pod writes a claim against a device class. Show
 `kubectl get resourceslices -o yaml | head -60`: the GPUs with UUIDs and memory, and the rails with
@@ -87,7 +106,7 @@ NICs are claimed the same way, in the same pod spec, so a pod can ask for "4 GPU
 can vary the rail count per experiment without touching the host. Show the two claims in
 `deploy/k8s/rendered/e2-rails2/manifests.yaml`.
 
-**Why dranet, and why a fork of it.** dranet is the driver that publishes NICs through DRA. Upstream
+**Why dranet, and why a fork of it** (slide 3, last bullet). dranet is the driver that publishes NICs through DRA. Upstream
 gives a pod a NIC by moving it into the pod's network namespace. On this site the node health check
 inventories the rails on the host; a moved rail reads as a broken node and the tray gets drained and
 rebooted (that happened to three racks in earlier work). The fork adds an IPVLAN mode: the rail stays
@@ -97,7 +116,7 @@ only lets you set when no container namespace exists — so the bootstrap sets i
 leased node before installing k3s and restores it at teardown. Decisions we made and why: no pod runs
 with host networking, no pod is privileged, and the host's view of its NICs never changes.
 
-**Why Cilium, and which settings matter here** (`infra/k8s_bootstrap/platform/cilium/values.yaml`).
+**Why Cilium, and which settings matter here** (slide 2, the middle band of the diagram) (`infra/k8s_bootstrap/platform/cilium/values.yaml`).
 Cilium is the pod network. It replaces kube-proxy with eBPF (no iptables rules churned on a host whose
 health check watches routing), it tunnels pod traffic over the management NIC with geneve so the site
 network never has to learn pod addresses (no BGP, no LoadBalancer IPs, both site rules), and Hubble
@@ -105,7 +124,7 @@ shows flows. The important design point: the pod network carries only the rendez
 bootstrap handshake; the collective's data goes over NVLink or the rails. The "TCP over the overlay"
 result (4 GB/s) is the measured reason.
 
-## 2. Prove the design before benchmarking (1 minute warm, 5 minutes on a cold tray)
+## 2. Prove the design before benchmarking (1 minute warm, 5 minutes on a cold tray) — terminal, no slide
 
 ```bash
 kubectl apply -f deploy/k8s/probe/probe-rails.yaml
@@ -122,13 +141,14 @@ also shows that the host still owns the rail (same address, four RDMA links) whi
 Finally, it runs `ibv_rc_pingpong` between the two probe pods on that index: about 12 to 15
 microseconds per 4 KiB round trip, about 120 microseconds per 1 MiB.
 
-What to say: most recipes hard-code the GID index to 3. Inside our pods that would fail, because the
+What to say (this ties back to slide 3's last bullet, the shared RDMA namespace mode): most recipes
+hard-code the GID index to 3. Inside our pods that would fail, because the
 pod's address is a later entry. So every RDMA run discovers the index from the address table
 (`python -m bench gid`), after first soliciting the router for an address — a fresh pod only has a
 link-local address until a router advertisement arrives. This is a small example of the brief's
 "separate evidence from diagnosis": we read the table instead of assuming.
 
-## 3. Baseline, scaling and diagnosis — run three cells live (about 4 minutes)
+## 3. Baseline, scaling and diagnosis — run three cells live (about 4 minutes) — slides 4 to 7
 
 ```bash
 rm -rf results/raw/e5-counters-nvlink results/raw/e5-counters-rdma results/raw/e5-counters-rails1   # only if you want them re-run rather than skipped
@@ -147,17 +167,19 @@ rails carries about 480 Gb/s; in the rails1 cell one rail carries about 410 Gb/s
 
 ### What to say, tied to the recorded results
 
-**Baseline (brief item 2).** Same 8-GPU all-reduce over three paths, 1 MiB to 8 GiB. NVLink reaches
+**Baseline (brief item 2) — slide 4, then slide 5 for the small-message floor.** Same 8-GPU all-reduce over three paths, 1 MiB to 8 GiB. NVLink reaches
 835 GB/s bus bandwidth; the four rails about 425 GB/s; TCP on one rail 118 GB/s; TCP on the pod
 overlay 4 GB/s. Below a few MiB every path costs about the same 20 to 80 microseconds — fixed costs,
 not data. Which path was used is not inferred from the speed: every result records NCCL's own
 connection log (256 NVLink channels, or 640 RDMA channels with GPUDirect, or socket channels).
 
-**Scaling (brief item 2).** The training workload — a 124M-parameter GPT with PyTorch DDP — runs at 1,
+**Scaling (brief item 2) — slide 6.** Its notes lead with the DDP bucket size (25 MiB default, about 19
+all-reduces per step) and why that size lets the two comparisons separate wire speed from per-collective
+fixed cost. The training workload — a 124M-parameter GPT with PyTorch DDP — runs at 1,
 2, 4 GPUs on one tray and 8 across two. Efficiency 93 % at 2, 78 % at 4, 92 % at 8 over NVLink, 69 % at
 8 over the rails. The profiler shows communication taking most of the step at this model size.
 
-**Diagnosis (brief item 3), evidence first.** Bandwidth on the RDMA path scales with the number of
+**Diagnosis (brief item 3), evidence first — slide 7.** Bandwidth on the RDMA path scales with the number of
 rails: 96, 207, 364 GB/s at 1, 2, 4 rails. The bytes the NIC counted on the wire equal the theoretical
 minimum for a two-node all-reduce, and a single rail carried 411 Gb/s — impossible on a 200 Gb/s link,
 so a rail is really four 200 Gb/s planes, 800 Gb/s (the physical ports `rdma_p0..p3_rail0` are on the
@@ -168,7 +190,7 @@ congestion, not PCIe. The diagnosis, kept apart: the remaining suspect is the pe
 the next experiment named. The 1-to-4-GPU drop on one tray involves no NIC at all — that one is model
 size and launch overhead, and saying so is the point.
 
-## 4. The optimization — Baseline → Hypothesis → Change → Measurement → Conclusion (brief item 4)
+## 4. The optimization — Baseline → Hypothesis → Change → Measurement → Conclusion (brief item 4) — slide 8
 
 Recorded in `results/tables/e4_before_after.csv`; the chart is on the slide. Baseline: one queue pair
 per NCCL connection (NCCL's default) on the RDMA path, four rails, GPUDirect on. Hypothesis, written
@@ -182,7 +204,7 @@ real but this knob cannot reach it — splitting each message across queue pairs
 request and multiplies completions; it helps on fabrics where a single flow cannot fill a link, which a
 two-tray rail path is not. Keep the default. A negative result, reported as one.
 
-Then the knob that did help the workload: DDP gradient buckets 25 → 200 MiB over the rails gave
+Then slide 9, the knob that did help the workload: DDP gradient buckets 25 → 200 MiB over the rails gave
 2090 → 2769 samples/s (+32 %) and cut the communication share of a step from 91 % to 32 %. That is the
 small-message finding applied: fewer, larger exchanges. Other measured knobs, for questions:
 GPUDirect off −38 % (same bytes on the wire, 1.6× the time); NVLS vs Ring on NVLink 474 vs 388 GB/s;
@@ -191,7 +213,10 @@ on TCP, still far below RDMA. Two settings are deliberately fixed rather than tu
 discovered, and `NCCL_P2P_NET_CHUNKSIZE` is left unset on the RDMA path (an earlier record: with it set,
 queue pairs connected but no bytes moved).
 
-## 5. Dashboard walkthrough (about 4 minutes) — *Compass — NCCL fabric counters*
+## 5. Dashboard walkthrough (about 4 minutes) — *Compass — NCCL fabric counters* — return to slide 7
+
+The dashboard is the live version of slide 7's evidence table: the same counters, on the same trays,
+while the three cells from section 3 run.
 
 Panels top to bottom; the node variable on "All" shows both workers.
 
@@ -214,7 +239,7 @@ How the data gets there: a Terraform-managed Grafana Alloy collector in the clus
 exporters the site already runs on every tray (node, DCGM, RDMA, NVLink, PCIe) and ships to Grafana
 Cloud with a per-tenant push token that Terraform minted. Nothing was installed on the trays for this.
 
-## 6. Extending to production (brief item 5), and closing
+## 6. Extending to production (brief item 5), and closing — slide 10
 
 The manifests scale by node count: one pod per tray, one GPU claim and one rail claim per pod. Inside
 an NVLink domain use NVLink; between domains budget for the rails and size the gradient buckets
