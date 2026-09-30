@@ -54,14 +54,18 @@ def main(argv=None) -> int:
     if not sw.empty and (sw.experiment == "E4").any():
         ch["before_after_box"] = charts.before_after_box(sw, os.path.join(cdir, "before_after_box.png"))
     for r in results:  # counter timelines for every run that shipped watcher CSVs
-        csvs = glob.glob(os.path.join(r["_dir"], "counters.*.csv"))
+        csvs = [
+            p
+            for p in glob.glob(os.path.join(r["_dir"], "counters.*.csv"))
+            if not p.endswith("counters.per-phase.csv")
+        ]
         if not csvs or not r.get("phases"):
             continue
         try:
             df = counters.rates(pd.concat([counters.parse_counters_csv(p) for p in csvs], ignore_index=True))
             df = counters.join_phases(df, r["phases"])
             counters.per_phase_summary(df).to_csv(
-                os.path.join(r["_dir"], "counters.per_phase.csv"), index=False
+                os.path.join(r["_dir"], "counters.per-phase.csv"), index=False
             )
             if (df.metric == "port_xmit_data").any():
                 ch[f"counters_{r['run_id']}"] = charts.counters_timeline(

@@ -1,0 +1,97 @@
+=== e1-nvlink node_rank=0 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 4
+IMEX channels: channel0 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if85        UP             10.42.2.99/32 fe80::a808:e3ff:fed1:30d2/64 
+W0930 05:53:07.058000 1 torch/distributed/run.py:766] 
+W0930 05:53:07.058000 1 torch/distributed/run.py:766] *****************************************
+W0930 05:53:07.058000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 05:53:07.058000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-1MiB", "event": "start", "t": 1790747613.1070633}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-1MiB", "event": "end", "t": 1790747613.1094224}
+PHASE {"name": "timed-1MiB", "event": "start", "t": 1790747613.1095831}
+PHASE {"name": "timed-1MiB", "event": "end", "t": 1790747613.1182}
+PERF {"bytes": 1048576, "size": "1MiB", "iters": 100, "mean_s": 8.2e-05, "algbw_GBs": 12.712, "busbw_GBs": 22.247, "spread_pct": 8.74, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-2MiB", "event": "start", "t": 1790747615.400876}
+PHASE {"name": "warmup-2MiB", "event": "end", "t": 1790747615.4019496}
+PHASE {"name": "timed-2MiB", "event": "start", "t": 1790747615.4022026}
+PHASE {"name": "timed-2MiB", "event": "end", "t": 1790747615.4098656}
+PERF {"bytes": 2097152, "size": "2MiB", "iters": 100, "mean_s": 7.3e-05, "algbw_GBs": 28.773, "busbw_GBs": 50.353, "spread_pct": 6.1, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-4MiB", "event": "start", "t": 1790747615.4132066}
+PHASE {"name": "warmup-4MiB", "event": "end", "t": 1790747615.4953697}
+PHASE {"name": "timed-4MiB", "event": "start", "t": 1790747615.4956203}
+PHASE {"name": "timed-4MiB", "event": "end", "t": 1790747615.502188}
+PERF {"bytes": 4194304, "size": "4MiB", "iters": 100, "mean_s": 6.3e-05, "algbw_GBs": 66.655, "busbw_GBs": 116.647, "spread_pct": 1.34, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-8MiB", "event": "start", "t": 1790747615.5054886}
+PHASE {"name": "warmup-8MiB", "event": "end", "t": 1790747615.5070605}
+PHASE {"name": "timed-8MiB", "event": "start", "t": 1790747615.5072784}
+PHASE {"name": "timed-8MiB", "event": "end", "t": 1790747615.5149422}
+PERF {"bytes": 8388608, "size": "8MiB", "iters": 100, "mean_s": 7.4e-05, "algbw_GBs": 113.727, "busbw_GBs": 199.022, "spread_pct": 0.9, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-16MiB", "event": "start", "t": 1790747615.5182328}
+PHASE {"name": "warmup-16MiB", "event": "end", "t": 1790747615.520308}
+PHASE {"name": "timed-16MiB", "event": "start", "t": 1790747615.5205266}
+PHASE {"name": "timed-16MiB", "event": "end", "t": 1790747615.5306933}
+PERF {"bytes": 16777216, "size": "16MiB", "iters": 100, "mean_s": 9.9e-05, "algbw_GBs": 169.714, "busbw_GBs": 296.999, "spread_pct": 0.61, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-32MiB", "event": "start", "t": 1790747615.5340638}
+PHASE {"name": "warmup-32MiB", "event": "end", "t": 1790747615.537397}
+PHASE {"name": "timed-32MiB", "event": "start", "t": 1790747615.537574}
+PHASE {"name": "timed-32MiB", "event": "end", "t": 1790747615.548003}
+PERF {"bytes": 33554432, "size": "32MiB", "iters": 50, "mean_s": 0.000206, "algbw_GBs": 163.235, "busbw_GBs": 285.662, "spread_pct": 0.31, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-64MiB", "event": "start", "t": 1790747615.5509999}
+PHASE {"name": "warmup-64MiB", "event": "end", "t": 1790747615.556712}
+PHASE {"name": "timed-64MiB", "event": "start", "t": 1790747615.556848}
+PHASE {"name": "timed-64MiB", "event": "end", "t": 1790747615.5710497}
+PERF {"bytes": 67108864, "size": "64MiB", "iters": 50, "mean_s": 0.000281, "algbw_GBs": 238.64, "busbw_GBs": 417.62, "spread_pct": 0.27, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-128MiB", "event": "start", "t": 1790747615.5751088}
+PHASE {"name": "warmup-128MiB", "event": "end", "t": 1790747615.5831819}
+PHASE {"name": "timed-128MiB", "event": "start", "t": 1790747615.5833178}
+PHASE {"name": "timed-128MiB", "event": "end", "t": 1790747615.6033657}
+PERF {"bytes": 134217728, "size": "128MiB", "iters": 50, "mean_s": 0.000398, "algbw_GBs": 337.269, "busbw_GBs": 590.221, "spread_pct": 0.3, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-256MiB", "event": "start", "t": 1790747615.6076381}
+PHASE {"name": "warmup-256MiB", "event": "end", "t": 1790747615.6150107}
+PHASE {"name": "timed-256MiB", "event": "start", "t": 1790747615.6151109}
+PHASE {"name": "timed-256MiB", "event": "end", "t": 1790747615.629683}
+PERF {"bytes": 268435456, "size": "256MiB", "iters": 20, "mean_s": 0.000725, "algbw_GBs": 370.253, "busbw_GBs": 647.943, "spread_pct": 0.22, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-512MiB", "event": "start", "t": 1790747615.6330054}
+PHASE {"name": "warmup-512MiB", "event": "end", "t": 1790747615.6467474}
+PHASE {"name": "timed-512MiB", "event": "start", "t": 1790747615.6468298}
+PHASE {"name": "timed-512MiB", "event": "end", "t": 1790747615.6739652}
+PERF {"bytes": 536870912, "size": "512MiB", "iters": 20, "mean_s": 0.001354, "algbw_GBs": 396.65, "busbw_GBs": 694.137, "spread_pct": 0.13, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-1GiB", "event": "start", "t": 1790747615.6772964}
+PHASE {"name": "warmup-1GiB", "event": "end", "t": 1790747615.7036667}
+PHASE {"name": "timed-1GiB", "event": "start", "t": 1790747615.7037315}
+PHASE {"name": "timed-1GiB", "event": "end", "t": 1790747615.7298963}
+PERF {"bytes": 1073741824, "size": "1GiB", "iters": 10, "mean_s": 0.002612, "algbw_GBs": 411.113, "busbw_GBs": 719.448, "spread_pct": 0.11, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-2GiB", "event": "start", "t": 1790747615.7333348}
+PHASE {"name": "warmup-2GiB", "event": "end", "t": 1790747615.7797244}
+PHASE {"name": "timed-2GiB", "event": "start", "t": 1790747615.7797787}
+PHASE {"name": "timed-2GiB", "event": "end", "t": 1790747615.8256006}
+PERF {"bytes": 2147483648, "size": "2GiB", "iters": 10, "mean_s": 0.004578, "algbw_GBs": 469.107, "busbw_GBs": 820.937, "spread_pct": 0.07, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790747615.829272}
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790747615.8575797}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790747615.857635}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790747615.90287}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.009038, "algbw_GBs": 475.212, "busbw_GBs": 831.621, "spread_pct": 0.08, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-8GiB", "event": "start", "t": 1790747615.9072678}
+PHASE {"name": "warmup-8GiB", "event": "end", "t": 1790747615.9634352}
+PHASE {"name": "timed-8GiB", "event": "start", "t": 1790747615.9634771}
+PHASE {"name": "timed-8GiB", "event": "end", "t": 1790747616.0533464}
+PERF {"bytes": 8589934592, "size": "8GiB", "iters": 5, "mean_s": 0.017967, "algbw_GBs": 478.091, "busbw_GBs": 836.66, "spread_pct": 0.04, "slowest_rank": 4, "correct": true}
+RANK0 host=gpu-3uwoq-6g3ya-2 local_rank=0 done
+RANK1 host=gpu-3uwoq-6g3ya-2 local_rank=1 done
+RANK2 host=gpu-3uwoq-6g3ya-2 local_rank=2 done
+RANK3 host=gpu-3uwoq-6g3ya-2 local_rank=3 done
+TRANSPORT {"mnnvl_channels": 256, "net_ib_channels": 0, "net_ib_gdr_channels": 0, "net_socket_channels": 0, "p2p_channels": 256, "shm_channels": 0, "ranks_reporting": 8, "path": "nvlink", "network": "Socket", "mnnvl": "1"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e1-nvlink/result.json

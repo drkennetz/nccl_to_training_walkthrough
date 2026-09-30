@@ -16,6 +16,8 @@ spec:
   volumes:
     - name: sys
       hostPath: {path: /sys, type: Directory}
+    - name: results
+      hostPath: {path: {{ d.results_host_path }}, type: DirectoryOrCreate}   # collect.py reads result.json through this pod
   containers:
     - name: watcher
       image: {{ d.image }}
@@ -25,4 +27,5 @@ spec:
         - {name: NODE_NAME, value: {{ node }}}
       volumeMounts:
         - {name: sys, mountPath: /host-sys, readOnly: true}
+        - {name: results, mountPath: /host-results, readOnly: true}
       resources: {requests: {cpu: 100m, memory: 128Mi}, limits: {memory: 512Mi}}
