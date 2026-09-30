@@ -76,6 +76,11 @@ def expand_matrix(m: dict) -> list[RunCell]:
         env = dict(d.get("common_env", {}))
         env.update(t.get("env", {}))
         env.update(e.get("env", {}))
+        imex = bool(e.get("imex", t["imex"]))
+        if not imex:
+            # Without the IMEX channel NCCL refuses to start with MNNVL on ("MNNVL is available but
+            # not working"); a single-tray cell rides intra-tray NVLink and never needs it.
+            env["NCCL_MNNVL_ENABLE"] = "0"
         repeats = int(e.get("repeats", 1))
         for r in range(repeats):
             run_id = e["id"] if repeats == 1 else f"{e['id']}-r{r}"

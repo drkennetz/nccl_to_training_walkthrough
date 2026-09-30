@@ -97,6 +97,7 @@ def test_single_node_training_cells_have_no_anti_affinity_and_right_gpu_count(ce
     assert "affinity" not in job["spec"]["template"]["spec"] and job["spec"]["completions"] == 1
     env = {e["name"]: e.get("value") for e in job["spec"]["template"]["spec"]["containers"][0]["env"]}
     assert env["NPROC_PER_NODE"] == "2"
+    assert env["NCCL_MNNVL_ENABLE"] == "0"  # no IMEX channel on a single-tray cell
 
 
 def test_e4_repeats_have_distinct_ids_and_qps_env(cells):

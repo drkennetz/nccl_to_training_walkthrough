@@ -1,0 +1,18 @@
+=== e3-g1 node_rank=0 on gpu-3uwoq-6g3ya-1 ===
+GPUs visible : 1
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  eth0@if133       UP             10.42.1.246/32 fe80::5cb2:cdff:fef7:f5d4/64 
+PHASE {"name": "warmup", "event": "start", "t": 1790749587.5680616}
+PHASE {"name": "warmup", "event": "end", "t": 1790749606.2498455}
+PHASE {"name": "train", "event": "start", "t": 1790749606.2499714}
+PHASE {"name": "train", "event": "end", "t": 1790749607.3009014}
+PHASE {"name": "profile", "event": "start", "t": 1790749607.301204}
+PHASE {"name": "profile", "event": "end", "t": 1790749607.4488413}
+RANK0 host=gpu-3uwoq-6g3ya-1 local_rank=0 mean_step_s=0.0210
+PERF {"world": 1, "samples_per_s": 380.73, "step_s": 0.021, "comm_fraction": 0.0, "loss_first": 10.833297729492188, "loss_last": 10.859230041503906}
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 0, "net_ib_gdr_channels": 0, "net_socket_channels": 0, "p2p_channels": 0, "shm_channels": 0, "ranks_reporting": 0, "path": "local"}
+VALIDATION {"all_ok": true, "ranks_ok": 1, "world_size": 1}
+RESULT /results/e3-g1/result.json

@@ -16,3 +16,23 @@
 2026-09-30T06:16:30Z run  e1-tcprail
 2026-09-30T06:16:52Z FAIL e1-tcprail: job failed (Job has reached the specified backoff limit)
 2026-09-30T06:17:33Z matrix pass complete: 4 result(s)
+2026-09-30T06:18:07Z run  e1-tcprail
+2026-09-30T06:18:55Z done e1-tcprail in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.063906, "algbw_GBs": 67.207, "busbw_GBs": 117.612, "spread_pct": 0.01, "slowest_rank": 2, "co
+2026-09-30T06:19:36Z matrix pass complete: 5 result(s)
+2026-09-30T06:19:36Z run  e1-rdma-small
+2026-09-30T06:20:24Z done e1-rdma-small in 48s: PERF {"bytes": 1048576, "size": "1MiB", "iters": 200, "mean_s": 8.6e-05, "algbw_GBs": 12.175, "busbw_GBs": 21.307, "spread_pct": 3.28, "slowest_rank": 1, "corre
+2026-09-30T06:21:06Z matrix pass complete: 6 result(s)
+2026-09-30T06:21:06Z run  e2-rails1
+2026-09-30T06:21:54Z done e2-rails1 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.078592, "algbw_GBs": 54.649, "busbw_GBs": 95.635, "spread_pct": 0.02, "slowest_rank": 5, "cor
+2026-09-30T06:22:35Z run  e2-rails2
+2026-09-30T06:23:23Z done e2-rails2 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.036365, "algbw_GBs": 118.106, "busbw_GBs": 206.685, "spread_pct": 0.05, "slowest_rank": 1, "c
+2026-09-30T06:24:04Z run  e2-rails4
+2026-09-30T06:24:53Z done e2-rails4 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.020638, "algbw_GBs": 208.107, "busbw_GBs": 364.187, "spread_pct": 0.09, "slowest_rank": 1, "c
+2026-09-30T06:25:33Z matrix pass complete: 9 result(s)
+2026-09-30T06:26:17Z run  e3-g1
+2026-09-30T06:26:56Z done e3-g1 in 39s: PERF {"world": 1, "samples_per_s": 380.73, "step_s": 0.021, "comm_fraction": 0.0, "loss_first": 10.833297729492188, "loss_last": 10.859230041503906}
+2026-09-30T06:27:37Z run  e3-g2
+2026-09-30T06:28:14Z FAIL e3-g2: job failed (Job has reached the specified backoff limit)
+2026-09-30T06:28:55Z run  e3-g4
+2026-09-30T06:29:33Z FAIL e3-g4: job failed (Job has reached the specified backoff limit)
+2026-09-30T06:30:15Z matrix pass complete: 10 result(s)

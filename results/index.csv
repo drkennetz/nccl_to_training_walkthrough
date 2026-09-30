@@ -1,0 +1,10 @@
+run_id,experiment,transport,rails,world_size,nnodes,path,net_socket_channels,mnnvl_channels,net_ib_channels,all_ok,start,end,torch,nccl,image
+e1-nvlink-small,E1,nvlink,0,8,2,nvlink,0,256,0,True,2026-09-30T06:13:55Z,2026-09-30T06:13:56Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e1-nvlink,E1,nvlink,0,8,2,nvlink,0,256,0,True,2026-09-30T05:56:02Z,2026-09-30T05:56:03Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e1-rdma-small,E1,rdma,4,8,2,rdma_gdr,0,0,256,True,2026-09-30T06:20:14Z,2026-09-30T06:20:15Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e1-rdma,E1,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T06:11:49Z,2026-09-30T06:11:50Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e1-tcp,E1,tcp,0,8,2,tcp,256,0,0,True,2026-09-30T06:15:41Z,2026-09-30T06:15:42Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e1-tcprail,E1,tcp-rail,1,8,2,rdma_gdr,0,0,256,True,2026-09-30T06:18:46Z,2026-09-30T06:18:47Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e2-rails1,E2,rdma,1,8,2,rdma_gdr,0,0,256,True,2026-09-30T06:21:44Z,2026-09-30T06:21:44Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e2-rails2,E2,rdma,2,8,2,rdma_gdr,0,0,384,True,2026-09-30T06:23:13Z,2026-09-30T06:23:14Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest
+e2-rails4,E2,rdma,4,8,2,rdma_gdr,0,0,640,True,2026-09-30T06:24:43Z,2026-09-30T06:24:43Z,2.8.0a0+34c6371d24.nv25.08,2.27.7,quay.io/drkennetz/ktlo-labs:compass-latest

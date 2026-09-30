@@ -1,0 +1,14 @@
+{
+  "size_vs_busbw": "results/charts/size_vs_busbw.png",
+  "small_message_latency": "results/charts/small_message_latency.png",
+  "rails_vs_busbw": "results/charts/rails_vs_busbw.png",
+  "counters_e1-nvlink-small": "results/charts/counters_e1-nvlink-small.png",
+  "counters_e1-nvlink": "results/charts/counters_e1-nvlink.png",
+  "counters_e1-rdma-small": "results/charts/counters_e1-rdma-small.png",
+  "counters_e1-rdma": "results/charts/counters_e1-rdma.png",
+  "counters_e1-tcp": "results/charts/counters_e1-tcp.png",
+  "counters_e1-tcprail": "results/charts/counters_e1-tcprail.png",
+  "counters_e2-rails1": "results/charts/counters_e2-rails1.png",
+  "counters_e2-rails2": "results/charts/counters_e2-rails2.png",
+  "counters_e2-rails4": "results/charts/counters_e2-rails4.png"
+}
