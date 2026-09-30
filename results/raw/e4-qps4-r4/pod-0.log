@@ -1,0 +1,72 @@
+=== e4-qps4-r4 node_rank=0 on gpu-3uwoq-6g3ya-2 ===
+GPUs visible : 4
+IMEX channels: 
+RDMA devices : mlx5_17 mlx5_8 rdma_rail0 rdma_rail1 rdma_rail2 rdma_rail3 rdma_vf_rail0 rdma_vf_rail1 rdma_vf_rail2 rdma_vf_rail3 
+interfaces   :
+  lo               UNKNOWN        127.0.0.1/8 ::1/128 
+  rdma_vf_rail1@if29 UNKNOWN        fe80::2fe:e000:185:5144/64 
+  rdma_vf_rail2@if30 UNKNOWN        fe80::251:4000:166:72e/64 
+  rdma_vf_rail3@if31 UNKNOWN        fe80::200:3b00:1c9:afd8/64 
+  rdma_vf_rail0@if28 UNKNOWN        fe80::285:fb00:168:5c10/64 
+  eth0@if211       UP             10.42.2.198/32 fe80::88d6:efff:fe4f:576c/64 
+  rdma_vf_rail1@if29 UNKNOWN        fdcd:8300:a2af:70ee:2fe:e000:185:5144/64 
+  rdma_vf_rail2@if30 UNKNOWN        fdcd:8300:a3af:70ee:251:4000:166:72e/64 
+  rdma_vf_rail3@if31 UNKNOWN        fdcd:8300:a4af:70ee:200:3b00:1c9:afd8/64 
+  rdma_vf_rail0@if28 UNKNOWN        fdcd:8300:a1af:70ee:285:fb00:168:5c10/64 
+rdma_vf_rail0:
+  [4] fe80:0000:0000:0000:0285:fb00:0168:5c10  IB/RoCE v1   rdma_vf_rail0        link-local
+  [5] fe80:0000:0000:0000:0285:fb00:0168:5c10  RoCE v2      rdma_vf_rail0        link-local
+  [6] fdcd:8300:a1af:70ee:0285:fb00:0168:5c10  IB/RoCE v1   rdma_vf_rail0        global
+  [7] fdcd:8300:a1af:70ee:0285:fb00:0168:5c10  RoCE v2      rdma_vf_rail0        global <-- chosen
+rdma_vf_rail1:
+  [4] fe80:0000:0000:0000:02fe:e000:0185:5144  IB/RoCE v1   rdma_vf_rail1        link-local
+  [5] fe80:0000:0000:0000:02fe:e000:0185:5144  RoCE v2      rdma_vf_rail1        link-local
+  [6] fdcd:8300:a2af:70ee:02fe:e000:0185:5144  IB/RoCE v1   rdma_vf_rail1        global
+  [7] fdcd:8300:a2af:70ee:02fe:e000:0185:5144  RoCE v2      rdma_vf_rail1        global <-- chosen
+rdma_vf_rail2:
+  [4] fe80:0000:0000:0000:0251:4000:0166:072e  IB/RoCE v1   rdma_vf_rail2        link-local
+  [5] fe80:0000:0000:0000:0251:4000:0166:072e  RoCE v2      rdma_vf_rail2        link-local
+  [6] fdcd:8300:a3af:70ee:0251:4000:0166:072e  IB/RoCE v1   rdma_vf_rail2        global
+  [7] fdcd:8300:a3af:70ee:0251:4000:0166:072e  RoCE v2      rdma_vf_rail2        global <-- chosen
+rdma_vf_rail3:
+  [4] fe80:0000:0000:0000:0200:3b00:01c9:afd8  IB/RoCE v1   rdma_vf_rail3        link-local
+  [5] fe80:0000:0000:0000:0200:3b00:01c9:afd8  RoCE v2      rdma_vf_rail3        link-local
+  [6] fdcd:8300:a4af:70ee:0200:3b00:01c9:afd8  IB/RoCE v1   rdma_vf_rail3        global
+  [7] fdcd:8300:a4af:70ee:0200:3b00:01c9:afd8  RoCE v2      rdma_vf_rail3        global <-- chosen
+NCCL_IB_GID_INDEX=7  consistent=True
+NCCL_IB_HCA==rdma_vf_rail0,rdma_vf_rail1,rdma_vf_rail2,rdma_vf_rail3 NCCL_IB_GID_INDEX=7
+W0930 07:00:46.916000 1 torch/distributed/run.py:766] 
+W0930 07:00:46.916000 1 torch/distributed/run.py:766] *****************************************
+W0930 07:00:46.916000 1 torch/distributed/run.py:766] Setting OMP_NUM_THREADS environment variable for each process to be 1 in default, to avoid your system being overloaded, please further tune the variable for optimal performance in your application as needed. 
+W0930 07:00:46.916000 1 torch/distributed/run.py:766] *****************************************
+PHASE {"name": "warmup-16MiB", "event": "start", "t": 1790751673.2436655}
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+/usr/local/lib/python3.12/dist-packages/torch/distributed/distributed_c10d.py:4770: UserWarning: No device id is provided via `init_process_group` or `barrier `. Using the current device set by the user. 
+  warnings.warn(  # warn only once
+PHASE {"name": "warmup-16MiB", "event": "end", "t": 1790751674.3172498}
+PHASE {"name": "timed-16MiB", "event": "start", "t": 1790751674.3174253}
+PHASE {"name": "timed-16MiB", "event": "end", "t": 1790751674.3545895}
+PERF {"bytes": 16777216, "size": "16MiB", "iters": 100, "mean_s": 0.000369, "algbw_GBs": 45.511, "busbw_GBs": 79.644, "spread_pct": 0.54, "slowest_rank": 4, "correct": true}
+PHASE {"name": "warmup-512MiB", "event": "start", "t": 1790751676.6459434}
+PHASE {"name": "warmup-512MiB", "event": "end", "t": 1790751676.6846645}
+PHASE {"name": "timed-512MiB", "event": "start", "t": 1790751676.6848502}
+PHASE {"name": "timed-512MiB", "event": "end", "t": 1790751676.7523174}
+PERF {"bytes": 536870912, "size": "512MiB", "iters": 20, "mean_s": 0.003365, "algbw_GBs": 159.558, "busbw_GBs": 279.227, "spread_pct": 0.29, "slowest_rank": 1, "correct": true}
+PHASE {"name": "warmup-4GiB", "event": "start", "t": 1790751676.7565663}
+PHASE {"name": "warmup-4GiB", "event": "end", "t": 1790751676.8366299}
+PHASE {"name": "timed-4GiB", "event": "start", "t": 1790751676.8367066}
+PHASE {"name": "timed-4GiB", "event": "end", "t": 1790751676.9663234}
+PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.025919, "algbw_GBs": 165.709, "busbw_GBs": 289.991, "spread_pct": 0.05, "slowest_rank": 5, "correct": true}
+RANK2 host=gpu-3uwoq-6g3ya-2 local_rank=2 doneRANK1 host=gpu-3uwoq-6g3ya-2 local_rank=1 done
+
+RANK0 host=gpu-3uwoq-6g3ya-2 local_rank=0 done
+RANK3 host=gpu-3uwoq-6g3ya-2 local_rank=3 done
+TRANSPORT {"mnnvl_channels": 0, "net_ib_channels": 640, "net_ib_gdr_channels": 640, "net_socket_channels": 0, "p2p_channels": 448, "shm_channels": 0, "ranks_reporting": 8, "path": "rdma_gdr", "network": "IBext_v10", "mnnvl": "0"}
+TOPO {"world_size": 8, "n_hosts": 2, "hosts": ["gpu-3uwoq-6g3ya-1", "gpu-3uwoq-6g3ya-2"], "ranks_per_host": {"gpu-3uwoq-6g3ya-1": 4, "gpu-3uwoq-6g3ya-2": 4}, "gpu": "NVIDIA GB300"}
+VALIDATION {"all_ok": true, "ranks_ok": 8, "world_size": 8}
+RESULT /results/e4-qps4-r4/result.json

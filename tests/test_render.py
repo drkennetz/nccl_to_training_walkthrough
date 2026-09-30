@@ -32,7 +32,7 @@ def test_cell_counts(cells):
         and by_exp["E2"] == 3
         and by_exp["E3"] == 5
         and by_exp["E4"] == 15
-        and by_exp["E5"] == 7
+        and by_exp["E5"] == 8
     )
 
 

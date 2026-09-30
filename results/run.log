@@ -57,3 +57,25 @@
 2026-09-30T06:44:56Z run  e4-qps1-r4
 2026-09-30T06:45:45Z done e4-qps1-r4 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.018384, "algbw_GBs": 233.623, "busbw_GBs": 408.84, "spread_pct": 0.1, "slowest_rank": 1, "cor
 2026-09-30T06:46:26Z matrix pass complete: 19 result(s)
+2026-09-30T06:46:57Z run  e4-qps2-r0
+2026-09-30T06:47:45Z done e4-qps2-r0 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.018205, "algbw_GBs": 235.924, "busbw_GBs": 412.867, "spread_pct": 0.08, "slowest_rank": 1, "c
+2026-09-30T06:48:26Z run  e4-qps2-r1
+2026-09-30T06:49:14Z done e4-qps2-r1 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.018548, "algbw_GBs": 231.565, "busbw_GBs": 405.238, "spread_pct": 0.06, "slowest_rank": 5, "c
+2026-09-30T06:49:55Z run  e4-qps2-r2
+2026-09-30T06:50:44Z done e4-qps2-r2 in 49s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.019176, "algbw_GBs": 223.973, "busbw_GBs": 391.953, "spread_pct": 0.06, "slowest_rank": 6, "c
+2026-09-30T06:51:25Z run  e4-qps2-r3
+2026-09-30T06:52:13Z done e4-qps2-r3 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.019136, "algbw_GBs": 224.441, "busbw_GBs": 392.772, "spread_pct": 0.04, "slowest_rank": 3, "c
+2026-09-30T06:52:54Z run  e4-qps2-r4
+2026-09-30T06:53:42Z done e4-qps2-r4 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.027451, "algbw_GBs": 156.459, "busbw_GBs": 273.804, "spread_pct": 0.03, "slowest_rank": 2, "c
+2026-09-30T06:54:23Z matrix pass complete: 24 result(s)
+2026-09-30T06:54:43Z run  e4-qps4-r0
+2026-09-30T06:55:31Z done e4-qps4-r0 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.026159, "algbw_GBs": 164.186, "busbw_GBs": 287.326, "spread_pct": 0.04, "slowest_rank": 1, "c
+2026-09-30T06:56:12Z run  e4-qps4-r1
+2026-09-30T06:57:00Z done e4-qps4-r1 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.025796, "algbw_GBs": 166.496, "busbw_GBs": 291.369, "spread_pct": 0.04, "slowest_rank": 1, "c
+2026-09-30T06:57:41Z run  e4-qps4-r2
+2026-09-30T06:58:29Z done e4-qps4-r2 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.02539, "algbw_GBs": 169.157, "busbw_GBs": 296.026, "spread_pct": 0.07, "slowest_rank": 4, "co
+2026-09-30T06:59:10Z run  e4-qps4-r3
+2026-09-30T06:59:58Z done e4-qps4-r3 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.025883, "algbw_GBs": 165.938, "busbw_GBs": 290.392, "spread_pct": 0.04, "slowest_rank": 4, "c
+2026-09-30T07:00:39Z run  e4-qps4-r4
+2026-09-30T07:01:27Z done e4-qps4-r4 in 48s: PERF {"bytes": 4294967296, "size": "4GiB", "iters": 5, "mean_s": 0.025919, "algbw_GBs": 165.709, "busbw_GBs": 289.991, "spread_pct": 0.05, "slowest_rank": 5, "c
+2026-09-30T07:02:08Z matrix pass complete: 29 result(s)
