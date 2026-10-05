@@ -104,8 +104,8 @@ sections:
   chart: rails_vs_busbw
   bullets:
   - 'Bandwidth scales with the number of rails a pod claims: 96 GB/s with one rail, 207 with two, 364 with four (4 GiB messages)'
-  - The bytes counted on each rail match the theoretical minimum for a two-node all-reduce exactly — and one rail carried 411 Gb/s, which a 200 Gb/s link cannot do. So a rail is really a 4-plane 800 Gb/s
-    port; sysfs and ethtool report a single plane
+  - The bytes counted on each rail match the theoretical minimum for a two-node all-reduce exactly, in both directions — and one rail carried 411 Gb/s out and 412 Gb/s in at once, which a 200 Gb/s link
+    cannot do. A rail is really a 4-plane 800 Gb/s-per-direction port; sysfs and ethtool report a single plane
   - Each rail therefore ran at 51–60 % of its capacity. Congestion counters (CNP, ECN, out-of-sequence, ACK timeouts) stayed at zero; NIC and GPU both negotiate PCIe Gen6 x16 — so it is not the wire, not
     congestion, not PCIe
   - What remains is the per-rail injection path (one NCCL connection per GPU–NIC pair, GPUDirect across the Grace socket). That is a narrowed hypothesis, not a proof; the next experiment is more NCCL channels
@@ -115,8 +115,10 @@ sections:
   - 'Bridge from scaling: the 8-GPU run lost 23 points of efficiency moving from NVLink to the rails. The tempting story is ''the network is slow''. The brief tells us not to assume that, so this slide
     takes the RDMA path apart on its own: the same collective with 1, 2 and 4 rails, and a set of sustained runs made only to read the NIC, NVLink and PCIe counters while the collective is in flight. Evidence
     first, then the diagnosis.'
-  - 'How we know the rails are 800 Gb/s: we watched the NIC''s transmitted-bytes counter during a sustained all-reduce and cross-checked it against ethtool''s byte counter (they agree to the byte). One
-    rail moved 411 Gb/s. The physical NIC exposes four 200 Gb/s ports per rail, and the virtual function aggregates them.'
+  - 'How we know the rails are 800 Gb/s per direction: we watched the NIC''s transmitted-bytes and received-bytes counters during a sustained all-reduce and cross-checked them against ethtool''s byte counters
+    (they agree to the byte). One rail moved 411 Gb/s out and 412 Gb/s in at the same time. Link rates in sysfs and ethtool are per direction (200 Gb/s = 2 lanes x 100 Gb/s each way), so one 200 Gb/s link
+    cannot carry that; the physical NIC exposes four 200 Gb/s ports per rail and the virtual function aggregates them. If someone suggests 800 is a bidirectional figure (400 each way), the four-rail window
+    answers it: 482 out plus 483 in, about 965 Gb/s through one rail at once. Utilisation is therefore 51-60 % in each direction.'
   - 'How we know it is not congestion: the same watcher reads the RoCE congestion-control counters (CNPs sent and handled, ECN-marked packets) and the reliability counters (out-of-sequence, sequence errors,
     ACK timeouts). All flat at zero per second during every run.'
   - 'How we know it is not PCIe: lspci shows 64 GT/s x16 on the ConnectX-8 and on the GPU, about 120 GB/s per direction, against about 60 GB/s used per rail.'

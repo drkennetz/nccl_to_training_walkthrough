@@ -281,20 +281,30 @@ sustained 4 GiB all-reduces, and here is the arithmetic that changed my picture 
 
 A two-node all-reduce has a lower bound on the bytes that must cross between the nodes: each node
 must send half of its reduced data over and receive the other half (the reduce-scatter), then
-exchange the finished halves (the all-gather) — S bytes per direction per collective, no matter how
-clever the algorithm. In the single-rail run a 4 GiB all-reduce took 85.6 ms, so the wire must have
-carried at least 4.29 GB / 85.6 ms = 50 GB/s = **402 Gb/s**. The counter said 411 Gb/s. The two
-agree, and that is the point: a rail that sysfs (`ports/1/rate`), `ethtool` and every note I had
-described as "200 Gb/s" had just carried twice that. The physical device behind each rail VF has four
-ports (`rdma_p0_rail0` … `rdma_p3_rail0`, each 200 Gb/s); the virtual function aggregates them into one
-800 Gb/s device, and the per-port tools show one plane.
+exchange the finished halves (the all-gather) — S bytes **in each direction** per collective, no matter
+how clever the algorithm. In the single-rail run a 4 GiB all-reduce took 85.6 ms, so the wire must have
+carried at least 4.29 GB / 85.6 ms = 50 GB/s = **402 Gb/s** outbound, and the same inbound. The
+transmit counter said 411 Gb/s and the receive counter 412 Gb/s, at the same time, on the same rail.
 
-With the right denominator the picture is this:
+Now the question I had to stop and answer carefully, because it is where this kind of arithmetic
+usually goes wrong: *which direction is the quoted link rate?* Every tool I had reports a rail as
+"200 Gb/s" — `cat /sys/class/infiniband/rdma_vf_rail0/ports/1/rate` says `200 Gb/sec (2X NDR)`,
+`ethtool` says `200000Mb/s`. Those figures are, by convention, **per direction**: a 200 Gb/s link
+carries 200 Gb/s each way, and "2X NDR" literally means two lanes of 100 Gb/s per direction. So a
+single 200 Gb/s link cannot carry 411 Gb/s outbound, full stop — never mind the 412 Gb/s coming back
+at the same moment. The resolution is that the rail VF is not one link. Behind it sit four physical
+ports (`rdma_p0_rail0` … `rdma_p3_rail0`, each reporting 200 Gb/s), which the ConnectX-8 bundles into
+one 800 Gb/s-per-direction device, 1.6 Tb/s bidirectional. The per-port tools show one plane.
 
-| run | per rail on the wire | share of 800 Gb/s |
-|---|---|---|
-| 1 rail | 411 Gb/s | 51 % |
-| 4 rails | ~480 Gb/s each | 60 % |
+Could "800" instead be a bidirectional figure, 400 each way, with the counter showing one saturated
+direction? The four-rail window answers that: each rail carried 482 Gb/s out and 483 Gb/s in
+simultaneously — 965 Gb/s through one rail — which no 400-per-direction device can do. So, with the
+right denominator and the right direction:
+
+| run | per rail, transmit | per rail, receive | share of 800 Gb/s per direction |
+|---|---|---|---|
+| 1 rail | 411 Gb/s | 412 Gb/s | 51 % |
+| 4 rails | ~482 Gb/s each | ~483 Gb/s each | 60 % |
 
 The rails are **not** at line rate. So what is the ceiling? I went down the list with counters rather
 than opinions:
@@ -408,8 +418,10 @@ the Terraform, smoke-runs the analysis on fixtures, and publishes the arm64 imag
   size and it means nothing.
 - **Prove the transport, do not infer it.** NCCL tells you which path each channel took. A run that
   quietly fell back to TCP is a bug, and it will look like a slow fabric if you only watch busbw.
-- **Counters before opinions.** The 800 Gb/s rails, the flat congestion counters and the Gen6 PCIe links
-  were each one sysfs read away, and each one removed a plausible-sounding story.
+- **Counters before opinions, and know which direction a counter counts.** The 800 Gb/s-per-direction
+  rails, the flat congestion counters and the Gen6 PCIe links were each one sysfs read away, and each
+  one removed a plausible-sounding story. Link rates are per direction; `port_xmit_data` is transmit
+  only; read the receive counter too before you say "line rate".
 - **A negative result with a counter behind it is worth more than a positive one without.** Four queue
   pairs cost 29 % and the counters said exactly where the bytes stopped.
 - **Change how often you talk before you change how you talk.** On the slower transport, fewer and
