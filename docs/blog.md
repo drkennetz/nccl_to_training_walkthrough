@@ -13,7 +13,7 @@ I had two NVIDIA GB300 trays to do it on. That turned out to be exactly enough, 
 turned into something I have wanted to write down for a while: how a single plot — all-reduce
 bandwidth against message size — predicts what happens to a training step, and how to read the
 counters underneath that plot so you know *why*. Everything here is in the repository
-([`drkennetz/compass_takehome`](https://github.com/drkennetz/compass_takehome)); every number comes
+([`drkennetz/nccl_to_training_walkthrough`](https://github.com/drkennetz/nccl_to_training_walkthrough)); every number comes
 from a committed `result.json`, and the commands that produced each one are in
 [`docs/demo.md`](demo.md).
 
